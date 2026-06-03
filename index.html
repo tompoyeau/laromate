@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>L'Aromate — Burgers & Sandwichs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:       #6B7A5E;
+      --green-dark:  #4A5940;
+      --green-light: #8FA07B;
+      --green-pale:  #EFF3EB;
+      --cream:       #F7F3EC;
+      --warm-white:  #FDFAF5;
+      --dark:        #1C1C1A;
+      --text:        #3A3A37;
+      --text-light:  #6B6B66;
+      --gold:        #C09A5A;
+      --gold-light:  #D4B483;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--warm-white);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 72px;
+      background: rgba(253, 250, 245, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(107, 122, 94, 0.15);
+      transition: box-shadow 0.3s;
+    }
+    nav.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--green-dark);
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--gold); }
+
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+
+    .nav-cta {
+      background: var(--green-dark);
+      color: #fff !important;
+      padding: 0.6rem 1.4rem;
+      border-radius: 2px;
+      transition: background 0.2s !important;
+    }
+    .nav-cta:hover { background: var(--green) !important; color: #fff !important; }
+
+    /* mobile nav toggle */
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .nav-burger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--green-dark);
+      transition: all 0.3s;
+    }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: var(--green-dark);
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(160deg, rgba(74,89,64,0.95) 0%, rgba(30,35,25,0.85) 60%),
+        url('photos/hero.jpg') center/cover no-repeat;
+    }
+
+    /* texture overlay */
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 2rem;
+      max-width: 800px;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold-light);
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow::before,
+    .hero-eyebrow::after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 1px;
+      background: var(--gold-light);
+      opacity: 0.6;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3.5rem, 8vw, 7rem);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.25rem;
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold-light);
+    }
+
+    .hero-subtitle {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      font-style: italic;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 2.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.85rem 2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 2px;
+      transition: all 0.25s;
+    }
+    .btn-primary {
+      background: var(--gold);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+    .btn-outline {
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff;
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); transform: translateY(-1px); }
+
+    .hero-scroll {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      animation: bounce 2s infinite;
+    }
+    .hero-scroll svg { opacity: 0.4; }
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(6px); }
+    }
+
+    /* ── Sections ── */
+    section { padding: 6rem 2rem; }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 0.75rem;
+    }
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 30px;
+      height: 1px;
+      background: var(--green);
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      color: var(--dark);
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .section-title em { font-style: italic; color: var(--green); }
+
+    .section-desc {
+      font-size: 1rem;
+      color: var(--text-light);
+      max-width: 500px;
+      line-height: 1.7;
+    }
+
+    /* ── About strip ── */
+    #about {
+      background: var(--green-dark);
+      padding: 4rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .about-inner {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3rem;
+      max-width: 900px;
+      width: 100%;
+      text-align: center;
+    }
+    .about-stat {
+      color: #fff;
+    }
+    .about-stat-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .about-stat-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── Menu ── */
+    #menu {
+      background: var(--cream);
+      padding: 6rem 2rem;
+    }
+    .menu-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .menu-header {
+      margin-bottom: 4rem;
+    }
+
+    .menu-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 3rem;
+      border-bottom: 2px solid rgba(107,122,94,0.2);
+    }
+    .menu-tab {
+      padding: 0.85rem 2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .menu-tab:hover { color: var(--green); }
+    .menu-tab.active {
+      color: var(--green-dark);
+      border-bottom-color: var(--green-dark);
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .menu-panel { display: none; }
+    .menu-panel.active { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+
+    .menu-card {
+      background: var(--warm-white);
+      border-radius: 4px;
+      padding: 1.6rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      border: 1px solid rgba(107,122,94,0.12);
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .menu-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--green-light);
+      transform: scaleY(0);
+      transition: transform 0.25s;
+    }
+    .menu-card:hover {
+      box-shadow: 0 8px 32px rgba(74,89,64,0.1);
+      transform: translateY(-2px);
+    }
+    .menu-card:hover::before { transform: scaleY(1); }
+
+    .menu-card-body { flex: 1; }
+    .menu-card-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.4rem;
+    }
+    .menu-card-desc {
+      font-size: 0.82rem;
+      color: var(--text-light);
+      line-height: 1.55;
+    }
+    .menu-card-price {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--gold);
+      white-space: nowrap;
+      padding-top: 0.1rem;
+    }
+
+    /* ── Gallery ── */
+    #gallery {
+      background: var(--warm-white);
+      padding: 6rem 2rem;
+    }
+    .gallery-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .gallery-header {
+      margin-bottom: 3rem;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: repeat(2, 260px);
+      gap: 1rem;
+    }
+
+    .gallery-item {
+      overflow: hidden;
+      border-radius: 4px;
+      background: var(--green-pale);
+      position: relative;
+    }
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    .gallery-item:hover img { transform: scale(1.04); }
+    .gallery-item:hover .gallery-overlay { opacity: 1; }
+
+    .gallery-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(74,89,64,0.4);
+      opacity: 0;
+      transition: opacity 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gallery-overlay svg { color: #fff; }
+
+    /* layout */
+    .gallery-item:nth-child(1) { grid-column: span 5; grid-row: span 2; }
+    .gallery-item:nth-child(2) { grid-column: span 4; }
+    .gallery-item:nth-child(3) { grid-column: span 3; }
+    .gallery-item:nth-child(4) { grid-column: span 3; }
+    .gallery-item:nth-child(5) { grid-column: span 4; }
+
+    /* placeholder when no image */
+    .gallery-placeholder {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--green-pale) 0%, #dce5d4 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .gallery-placeholder svg { opacity: 0.4; width: 32px; height: 32px; }
+
+    /* ── Infos ── */
+    #infos {
+      background: var(--green-dark);
+      padding: 6rem 2rem;
+      color: #fff;
+    }
+    .infos-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .infos-left .section-label { color: var(--gold-light); }
+    .infos-left .section-label::before { background: var(--gold-light); }
+    .infos-left .section-title { color: #fff; }
+    .infos-left .section-title em { color: var(--gold-light); }
+    .infos-left .section-desc { color: rgba(255,255,255,0.55); }
+
+    .infos-right {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .info-block {}
+    .info-block-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold-light);
+      margin-bottom: 0.6rem;
+    }
+    .info-block-value {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.7;
+    }
+    .info-block-value a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .info-block-value a:hover { color: var(--gold-light); }
+
+    .hours-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.25rem 2rem;
+      font-size: 0.9rem;
+    }
+    .hours-row {
+      display: contents;
+    }
+    .hours-day { color: rgba(255,255,255,0.5); }
+    .hours-time { color: rgba(255,255,255,0.85); }
+    .hours-closed { color: rgba(255,255,255,0.3); font-style: italic; }
+
+    .info-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Map placeholder ── */
+    .map-wrap {
+      margin-top: 3rem;
+      border-radius: 4px;
+      overflow: hidden;
+      height: 220px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.75rem;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+    }
+    .map-wrap svg { opacity: 0.3; }
+
+    /* if Google Maps iframe is embedded */
+    .map-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      filter: grayscale(0.3) sepia(0.2);
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--dark);
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--green-light);
+      margin-bottom: 0.75rem;
+    }
+    .footer-logo span { color: var(--gold); }
+    .footer-copy {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 1.5rem; }
+      .nav-links { display: none; }
+      .nav-burger { display: flex; }
+
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 72px; left: 0; right: 0;
+        background: var(--warm-white);
+        padding: 2rem 2rem;
+        gap: 1.5rem;
+        border-bottom: 1px solid rgba(107,122,94,0.15);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      }
+      .nav-cta { align-self: flex-start; }
+
+      .about-inner { grid-template-columns: 1fr; gap: 2rem; }
+
+      .gallery-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto;
+      }
+      .gallery-item { grid-column: span 1 !important; grid-row: span 1 !important; height: 220px; }
+      .gallery-item:nth-child(1) { grid-column: span 2 !important; height: 280px; }
+
+      .infos-inner { grid-template-columns: 1fr; gap: 3rem; }
+
+      .menu-panel.active { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      section { padding: 4rem 1.25rem; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .gallery-item { grid-column: span 1 !important; height: 220px; }
+      .gallery-item:nth-child(1) { grid-column: span 1 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav id="navbar">
+    <a href="#hero" class="nav-logo">L'<span>Aromate</span></a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#menu">La carte</a></li>
+      <li><a href="#gallery">Galerie</a></li>
+      <li><a href="#infos" class="nav-cta">Nous trouver</a></li>
+    </ul>
+    <div class="nav-burger" id="navBurger" aria-label="Menu" role="button" tabindex="0">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">Burgers &amp; Sandwichs artisanaux</div>
+      <h1 class="hero-title">L'<em>Aromate</em></h1>
+      <p class="hero-subtitle">Fait maison, avec passion</p>
+      <div class="hero-actions">
+        <a href="#menu" class="btn btn-primary">Voir la carte</a>
+        <a href="#infos" class="btn btn-outline">Nous trouver</a>
+      </div>
+    </div>
+    <div class="hero-scroll" aria-hidden="true">
+      <svg width="16" height="24" viewBox="0 0 16 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="1" width="14" height="22" rx="7" stroke="currentColor"/>
+        <line x1="8" y1="6" x2="8" y2="10" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      Défiler
+    </div>
+  </section>
+
+  <!-- ── About strip ── -->
+  <section id="about">
+    <div class="about-inner">
+      <div class="about-stat">
+        <div class="about-stat-number">100%</div>
+        <div class="about-stat-label">Fait maison</div>
+      </div>
+      <div class="about-stat">
+        <div class="about-stat-number">12</div>
+        <div class="about-stat-label">Références à la carte</div>
+      </div>
+      <div class="about-stat">
+        <div class="about-stat-number">★ 4.8</div>
+        <div class="about-stat-label">Avis clients</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Menu ── -->
+  <section id="menu">
+    <div class="menu-inner">
+      <div class="menu-header">
+        <div class="section-label">La carte</div>
+        <h2 class="section-title">Nos <em>créations</em></h2>
+        <p class="section-desc">Viandes sélectionnées, sauces maison, produits frais. Servis avec frites maison ou salade et une boisson.</p>
+      </div>
+
+      <!-- Tabs + panels filled by JS -->
+      <div class="menu-tabs" id="menuTabs" role="tablist" style="overflow-x:auto;flex-wrap:nowrap"></div>
+      <div id="menuPanels"></div>
+    </div>
+  </section>
+
+  <!-- ── Gallery ── -->
+  <section id="gallery">
+    <div class="gallery-inner">
+      <div class="gallery-header">
+        <div class="section-label">Galerie</div>
+        <h2 class="section-title">Nos <em>plats</em></h2>
+      </div>
+      <!-- filled by JS from IndexedDB -->
+      <div class="gallery-grid" id="galleryGrid"></div>
+    </div>
+  </section>
+
+  <!-- ── Infos ── -->
+  <section id="infos">
+    <div class="infos-inner">
+      <div class="infos-left">
+        <div class="section-label">Nous trouver</div>
+        <h2 class="section-title">Venez nous <em>rendre visite</em></h2>
+        <p class="section-desc">On vous attend avec nos burgers et sandwichs faits maison, dans une ambiance chaleureuse.</p>
+        <div class="map-wrap" id="mapWrap" style="margin-top:2.5rem;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Carte Google Maps — à configurer dans l'admin
+        </div>
+      </div>
+
+      <div class="infos-right">
+        <div class="info-block">
+          <div class="info-block-label">Adresse</div>
+          <div class="info-block-value" id="infoAddress">—</div>
+        </div>
+
+        <div class="info-divider"></div>
+
+        <div class="info-block">
+          <div class="info-block-label">Horaires</div>
+          <div class="info-block-value">
+            <div class="hours-grid" id="hoursGrid"></div>
+          </div>
+        </div>
+
+        <div class="info-divider"></div>
+
+        <div class="info-block">
+          <div class="info-block-label">Contact</div>
+          <div class="info-block-value">
+            <a id="infoPhone" href="#">—</a><br/>
+            <a id="infoEmail" href="#">—</a>
+          </div>
+        </div>
+
+        <div class="info-divider"></div>
+
+        <div class="info-block">
+          <div class="info-block-label">Réseaux sociaux</div>
+          <div class="info-block-value">
+            <a id="infoInsta" href="#" style="margin-right:1rem;">Instagram</a>
+            <a id="infoFb" href="#">Facebook</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-logo">L'<span>Aromate</span></div>
+    <div class="footer-copy">&copy; 2026 L'Aromate · Tous droits réservés &nbsp;·&nbsp; <a href="admin.html" style="color:rgba(255,255,255,0.15);text-decoration:none" tabindex="-1">Admin</a></div>
+  </footer>
+
+  <script>
+    // ── Nav ──
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 20));
+    const burger = document.getElementById('navBurger');
+    const navLinks = document.getElementById('navLinks');
+    burger.addEventListener('click', () => navLinks.classList.toggle('open'));
+    burger.addEventListener('keydown', e => { if (e.key === 'Enter') navLinks.classList.toggle('open'); });
+    navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+
+    // ── Fade-in observer ──
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    function observeNew(selector) {
+      document.querySelectorAll(selector).forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        observer.observe(el);
+      });
+    }
+    observeNew('.about-stat, .info-block');
+
+    // ── DATA CONSTANTS (must match admin.html) ──
+    const LS_MENU = 'laromate_menu', LS_INFO = 'laromate_info';
+    const DB_NAME = 'laromate_db', DB_VER = 1;
+    const DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+
+    const DEFAULT_MENU = {categories:[
+      {id:'burgers',name:'Burgers',subtitle:'Servis avec frites maison ou petite salade et une boisson',items:[
+        {id:'b1',name:"L'Aromate",desc:"Sauce mayo maison, roquette, tomate, steak, burrata et pesto maison",price:"17€90"},
+        {id:'b2',name:"Le Chèvre",desc:"Sauce moutarde miel, mâche, tomate, steak, cheddar, chèvre et miel",price:"16€90"},
+        {id:'b3',name:"L'Avocat",desc:"Sauce mayo maison, mâche, steak ou filet de poulet, cheddar, avocat",price:"16€90"},
+        {id:'b4',name:"Le Ring",desc:"Sauce bleu maison, mâche, steak, cornichon, cheddar, oignons rings",price:"16€90"},
+        {id:'b5',name:"Le Breakfast",desc:"Sauce maison, steak, cheddar, œuf, bacon, oignon, cornichon",price:"16€90"},
+        {id:'b6',name:"Le Classique",desc:"Sauce maison, oignon, tomate, cornichon, steak, cheddar",price:"14€90"},
+      ]},
+      {id:'sandwichs',name:'Sandwichs',subtitle:'Servis avec frites maison ou petite salade et une boisson',items:[
+        {id:'s1',name:"La Bavette",desc:"Sauce poivre, mâche, oignon, bavette mariné, sauce cheddar maison",price:"16€90"},
+        {id:'s2',name:"Le Thaï",desc:"Sauce thaï, mâche, oignon, tomate, poulet mariné épicé, sauce cheddar maison",price:"15€90"},
+        {id:'s3',name:"Le Smashé",desc:"Sauce barbecue, mâche, cornichon, steak smashé, cheddar, bacon de veau, sauce cheddar maison",price:"15€90"},
+        {id:'s4',name:"Le Falafel",desc:"Sauce mayo, tomate, cornichon, choux rouges confits, feto, persil, falafel maison, sauce cheddar maison",price:"15€90"},
+        {id:'s5',name:"Le Parmegiano",desc:"Sauce mayo, roquette, tomate, oignon, steak smashé, mozzarella, pesto maison, parmesan rapé, sauce cheddar maison",price:"16€90"},
+        {id:'s6',name:"Le Philly's",desc:"Sauce mayo, roquette, poivron, oignon, entrecôte, sauce cheddar maison",price:"19€90"},
+        {id:'s7',name:"Le Crémeux",desc:"Sauce boursin, champignon, tomate, oignon, poulet à la crème, sauce cheddar maison",price:"15€90"},
+      ]},
+      {id:'pates',name:'Pâtes',subtitle:'Les pâtes sont servies seules',items:[
+        {id:'p1',name:"La Saumon",desc:"Tagliatelles à la crème, saumon fumé, persil, parmegiano regiano",price:"13€90"},
+        {id:'p2',name:"La Forestière",desc:"Tagliatelles à la crème, sauce champignon, morceau de poulet, persil, parmegiano regiano",price:"13€90"},
+      ]},
+      {id:'salades',name:'Salades',subtitle:'Les salades sont servies seules',items:[
+        {id:'sa1',name:"La César",desc:"Mélange de salades, poulet caramélisé, tomates cerises, croûtons, mozzarella, sauce vinaigrette maison et sauce pesto maison",price:"13€90"},
+        {id:'sa2',name:"La Saumon",desc:"Mélange de salades, saumon fumé, tomates cerises, croûtons, avocat, mozzarella, sauce vinaigrette maison et sauce pesto maison",price:"14€90"},
+      ]},
+      {id:'desserts',name:'Desserts',subtitle:'',items:[
+        {id:'d1',name:"Le Tiramisu",desc:"",price:"7€90"},
+        {id:'d2',name:"Cheesecake",desc:"",price:"7€90"},
+        {id:'d3',name:"Café",desc:"",price:"2€20"},
+        {id:'d4',name:"Thé",desc:"Thé vert, thé noir, infusion",price:"3€90"},
+        {id:'d5',name:"Soft",desc:"Dr pepper, pulco, canada dry, san pellegrino",price:"2€20"},
+      ]},
+    ]};
+
+    const DEFAULT_INFO = {address:'',phone:'',email:'',instagram:'',facebook:'',maps:'',hours:{
+      lundi:{open:false,time:''},mardi:{open:true,time:'11h30 – 14h30 · 18h30 – 22h00'},
+      mercredi:{open:true,time:'11h30 – 14h30 · 18h30 – 22h00'},jeudi:{open:true,time:'11h30 – 14h30 · 18h30 – 22h00'},
+      vendredi:{open:true,time:'11h30 – 14h30 · 18h30 – 22h30'},samedi:{open:true,time:'12h00 – 15h00 · 18h30 – 22h30'},
+      dimanche:{open:true,time:'12h00 – 15h00'},
+    }};
+
+    // ── Store helpers ──
+    function getMenu(){try{const m=JSON.parse(localStorage.getItem(LS_MENU));return(m&&m.categories)?m:DEFAULT_MENU}catch{return DEFAULT_MENU}}
+    function getInfo(){try{return JSON.parse(localStorage.getItem(LS_INFO))||DEFAULT_INFO}catch{return DEFAULT_INFO}}
+
+    // ── IDB ──
+    let _db=null;
+    function openDB(){
+      if(_db)return Promise.resolve(_db);
+      return new Promise((res,rej)=>{
+        const req=indexedDB.open(DB_NAME,DB_VER);
+        req.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'})};
+        req.onsuccess=e=>{_db=e.target.result;res(_db)};req.onerror=rej;
+      });
+    }
+    async function dbGetAll(){const db=await openDB();return new Promise((res,rej)=>{const req=db.transaction('photos','readonly').objectStore('photos').getAll();req.onsuccess=()=>res((req.result||[]).sort((a,b)=>a.order-b.order));req.onerror=rej});}
+
+    function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+    // ── Render menu (dynamic categories) ──
+    function switchMenuTab(catId, el) {
+      document.querySelectorAll('.menu-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.menu-panel').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('mpanel-' + catId).classList.add('active');
+    }
+
+    function renderMenu(){
+      const menu = getMenu();
+      const cats = menu.categories || [];
+
+      // Tabs
+      document.getElementById('menuTabs').innerHTML = cats.map((cat, i) =>
+        `<button class="menu-tab${i===0?' active':''}" role="tab" onclick="switchMenuTab('${esc(cat.id)}',this)">${esc(cat.name)}</button>`
+      ).join('');
+
+      // Panels
+      document.getElementById('menuPanels').innerHTML = cats.map((cat, i) => {
+        const cards = (cat.items||[]).map(it => `
+          <div class="menu-card">
+            <div class="menu-card-body">
+              <div class="menu-card-name">${esc(it.name)}</div>
+              ${it.desc ? `<div class="menu-card-desc">${esc(it.desc)}</div>` : ''}
+            </div>
+            <div class="menu-card-price">${esc(it.price)}</div>
+          </div>`).join('');
+        const subtitle = cat.subtitle
+          ? `<p style="grid-column:1/-1;font-size:.8rem;color:var(--text-light);font-style:italic;margin-bottom:.5rem">${esc(cat.subtitle)}</p>`
+          : '';
+        return `<div class="menu-panel${i===0?' active':''}" id="mpanel-${esc(cat.id)}">${subtitle}${cards}</div>`;
+      }).join('');
+
+      observeNew('.menu-card');
+    }
+
+    // ── Render gallery ──
+    async function renderGallery(){
+      const photos=await dbGetAll();
+      const grid=document.getElementById('galleryGrid');
+      if(!photos.length){
+        const placeholder=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+        grid.innerHTML=[1,2,3,4,5].map(()=>`<div class="gallery-item"><div class="gallery-placeholder">${placeholder}Photos à venir</div></div>`).join('');
+      }else{
+        grid.innerHTML=photos.map(p=>`
+          <div class="gallery-item">
+            <img src="${p.data}" alt="${esc(p.name)}" loading="lazy"/>
+            <div class="gallery-overlay"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          </div>`).join('');
+      }
+      observeNew('.gallery-item');
+    }
+
+    // ── Render infos ──
+    function renderInfos(){
+      const info=getInfo();
+      document.getElementById('infoAddress').textContent=info.address||'À compléter';
+      const phone=document.getElementById('infoPhone');
+      phone.textContent=info.phone||'À compléter';
+      phone.href=info.phone?'tel:'+info.phone.replace(/\s/g,''):'#';
+      const email=document.getElementById('infoEmail');
+      email.textContent=info.email||'À compléter';
+      email.href=info.email?'mailto:'+info.email:'#';
+      document.getElementById('infoInsta').href=info.instagram||'#';
+      document.getElementById('infoFb').href=info.facebook||'#';
+      if(info.maps){
+        document.getElementById('mapWrap').innerHTML=`<iframe src="${esc(info.maps)}" allowfullscreen loading="lazy"></iframe>`;
+      }
+      const hours=info.hours||DEFAULT_INFO.hours;
+      document.getElementById('hoursGrid').innerHTML=DAYS.map(day=>{
+        const h=hours[day]||{open:false,time:''};
+        const cap=day[0].toUpperCase()+day.slice(1);
+        return `<span class="hours-day">${cap}</span>${h.open?`<span class="hours-time">${esc(h.time)}</span>`:'<span class="hours-closed">Fermé</span>'}`;
+      }).join('');
+    }
+
+    // ── Init ──
+    renderMenu();
+    renderInfos();
+    renderGallery();
+  </script>
+</body>
+</html>
