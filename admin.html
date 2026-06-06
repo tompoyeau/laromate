@@ -158,7 +158,7 @@
       <div class="ferr" id="loginErr">Mot de passe incorrect</div>
     </div>
     <button class="btn btn-primary btn-full" onclick="doLogin()">Se connecter</button>
-    <p style="font-size:.7rem;color:var(--text-light);text-align:center;margin-top:1rem">Mot de passe par défaut : <strong>admin</strong></p>
+    <p style="font-size:.7rem;color:var(--text-light);text-align:center;margin-top:1rem">3 tentatives incorrectes = blocage 5 min</p>
   </div>
 </div>
 
@@ -304,7 +304,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const LS_MENU='laromate_menu', LS_INFO='laromate_info', LS_PASS='laromate_password';
+const LS_MENU='laromate_menu', LS_INFO='laromate_info', LS_PASS='laromate_password', LS_LOCK='laromate_lockout';
+const SESSION_KEY='laromate_session';
+const SESSION_TTL=8*60*60*1000;   // 8h
+const MAX_ATTEMPTS=3;
+const LOCK_TTL=5*60*1000;          // 5 min
+// SHA-256 de 'admin' — mot de passe par défaut
+const DEFAULT_HASH='8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
 const DB_NAME='laromate_db', DB_VER=1;
 const DAYS=['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
 
@@ -352,8 +358,8 @@ const DEFAULT_INFO={address:'',phone:'',email:'',instagram:'',facebook:'',maps:'
 
 // STORE
 const store={
-  getPass:()=>localStorage.getItem(LS_PASS)||'admin',
-  setPass:(p)=>localStorage.setItem(LS_PASS,p),
+  getPassHash:()=>localStorage.getItem(LS_PASS)||DEFAULT_HASH,
+  setPassHash:(h)=>localStorage.setItem(LS_PASS,h),
   getMenu:()=>{try{const m=JSON.parse(localStorage.getItem(LS_MENU));return(m&&m.categories)?m:DEFAULT_MENU}catch{return DEFAULT_MENU}},
   saveMenu:(m)=>localStorage.setItem(LS_MENU,JSON.stringify(m)),
   getInfo:()=>{try{return JSON.parse(localStorage.getItem(LS_INFO))||DEFAULT_INFO}catch{return DEFAULT_INFO}},
@@ -374,24 +380,96 @@ async function dbGetAll(){const db=await openDB();return new Promise((res,rej)=>
 async function dbPut(p){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(p);tx.oncomplete=res;tx.onerror=rej});}
 async function dbDel(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(id);tx.oncomplete=res;tx.onerror=rej});}
 
-// AUTH
-function doLogin(){
-  const v=document.getElementById('loginPass').value;
-  const err=document.getElementById('loginErr');
-  if(v===store.getPass()){
+// ── AUTH ──
+
+// WebCrypto SHA-256
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Session (sessionStorage = effacé à la fermeture de l'onglet)
+function createSession(){
+  sessionStorage.setItem(SESSION_KEY,JSON.stringify({
+    token:crypto.randomUUID(),
+    expires:Date.now()+SESSION_TTL
+  }));
+}
+function hasValidSession(){
+  try{
+    const s=JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    return s&&s.expires>Date.now();
+  }catch{return false;}
+}
+function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
+
+// Lockout
+function getLockout(){
+  try{
+    const l=JSON.parse(localStorage.getItem(LS_LOCK));
+    if(!l)return null;
+    if(Date.now()>l.until){localStorage.removeItem(LS_LOCK);return null;}
+    return l;
+  }catch{return null;}
+}
+function recordFail(){
+  const l=JSON.parse(localStorage.getItem(LS_LOCK)||'{"attempts":0}');
+  l.attempts=(l.attempts||0)+1;
+  if(l.attempts>=MAX_ATTEMPTS){
+    l.until=Date.now()+LOCK_TTL;
+    showLoginErr(`Compte bloqué 5 min après ${MAX_ATTEMPTS} tentatives incorrectes.`);
+  }else{
+    showLoginErr(`Mot de passe incorrect — ${MAX_ATTEMPTS-l.attempts} essai(s) restant(s).`);
+  }
+  localStorage.setItem(LS_LOCK,JSON.stringify(l));
+}
+function clearLock(){localStorage.removeItem(LS_LOCK);}
+
+function showLoginErr(msg){
+  const el=document.getElementById('loginErr');
+  el.textContent=msg;el.style.display='block';
+  setTimeout(()=>el.style.display='none',4000);
+}
+
+// Login
+async function doLogin(){
+  const lock=getLockout();
+  if(lock){
+    const mins=Math.ceil((lock.until-Date.now())/60000);
+    showLoginErr(`Trop de tentatives. Réessaie dans ${mins} min.`);
+    return;
+  }
+  const pass=document.getElementById('loginPass').value;
+  if(!pass)return;
+  const hash=await sha256(pass);
+  if(hash===store.getPassHash()){
+    clearLock();
+    createSession();
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
     initApp();
-  }else{err.style.display='block';setTimeout(()=>err.style.display='none',3000);}
+  }else{
+    recordFail();
+  }
 }
-document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
-function doLogout(){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('loginPass').value='';}
-function changePass(){
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+function doLogout(){
+  clearSession();
+  document.getElementById('app').style.display='none';
+  document.getElementById('login').style.display='flex';
+  document.getElementById('loginPass').value='';
+}
+
+async function changePass(){
   const np=document.getElementById('newPass').value,cp=document.getElementById('confPass').value;
   const err=document.getElementById('passErr');
-  if(!np){showFerr(err,'Le mot de passe ne peut pas être vide');return}
-  if(np!==cp){showFerr(err,'Les mots de passe ne correspondent pas');return}
-  err.style.display='none';store.setPass(np);
+  if(!np){showFerr(err,'Le mot de passe ne peut pas être vide');return;}
+  if(np.length<6){showFerr(err,'Minimum 6 caractères');return;}
+  if(np!==cp){showFerr(err,'Les mots de passe ne correspondent pas');return;}
+  err.style.display='none';
+  const hash=await sha256(np);
+  store.setPassHash(hash);
   document.getElementById('newPass').value='';document.getElementById('confPass').value='';
   showToast('Mot de passe mis à jour','success');
 }
@@ -691,6 +769,13 @@ function initApp(){
   initUpload();
   renderGallery();
   updateHdrActions('menu');
+}
+
+// Auto-login si la session est toujours valide (même onglet)
+if(hasValidSession()){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='flex';
+  initApp();
 }
 </script>
 </body>
