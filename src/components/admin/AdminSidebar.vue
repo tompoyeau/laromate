@@ -97,6 +97,11 @@ const navSections = computed(() => [
         label: 'Avis clients',
         badge: reviews.pending.length || null
       },
+      {
+        id: 'google',
+        icon: '🔵',
+        label: 'Google Reviews',
+      },
     ]
   },
   {

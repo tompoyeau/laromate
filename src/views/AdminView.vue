@@ -91,6 +91,7 @@ import PromotionsPanel from '@/components/admin/panels/PromotionsPanel.vue'
 import QRCodePanel from '@/components/admin/panels/QRCodePanel.vue'
 import InfoPanel from '@/components/admin/panels/InfoPanel.vue'
 import PasswordPanel from '@/components/admin/panels/PasswordPanel.vue'
+import GoogleReviewsPanel from '@/components/admin/panels/GoogleReviewsPanel.vue'
 
 const auth = useAuthStore()
 const { success, error: toastError } = useToast()
@@ -114,6 +115,7 @@ const PANELS = {
   qrcode: QRCodePanel,
   info: InfoPanel,
   password: PasswordPanel,
+  google: GoogleReviewsPanel,
 }
 
 const PANEL_TITLES = {
@@ -127,6 +129,7 @@ const PANEL_TITLES = {
   qrcode: 'QR Code',
   info: 'Informations du restaurant',
   password: 'Mot de passe',
+  google: 'Google Reviews',
 }
 
 const currentPanel = computed(() => PANELS[activePanel.value] || DashboardPanel)
