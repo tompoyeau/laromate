@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
-const LS_KEY = 'laromate_menu'
+// Les images (base64) restent en localStorage — limite 1Mo/doc Firestore
+const LS_IMAGES = 'laromate_menu_images'
 
 const DEFAULT_MENU = {
   categories: [
@@ -55,27 +58,62 @@ const DEFAULT_MENU = {
   ]
 }
 
-export const useMenuStore = defineStore('menu', () => {
-  const data = ref(load())
+function loadImages() {
+  try { return JSON.parse(localStorage.getItem(LS_IMAGES) || '{}') } catch { return {} }
+}
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      if (!raw) return DEFAULT_MENU
-      const parsed = JSON.parse(raw)
-      // Ensure tags/allergens fields exist on old data
-      parsed.categories.forEach(cat => {
-        cat.items.forEach(item => {
+function saveImages(images) {
+  try { localStorage.setItem(LS_IMAGES, JSON.stringify(images)) } catch {}
+}
+
+// Retire le champ image avant d'envoyer à Firestore
+function stripImages(categories) {
+  return categories.map(cat => ({
+    ...cat,
+    items: cat.items.map(({ image, ...item }) => item)
+  }))
+}
+
+// Réinjecte les images depuis localStorage
+function mergeImages(categories, images) {
+  return categories.map(cat => ({
+    ...cat,
+    items: cat.items.map(item => ({ ...item, image: images[item.id] || '' }))
+  }))
+}
+
+export const useMenuStore = defineStore('menu', () => {
+  const data = ref(JSON.parse(JSON.stringify(DEFAULT_MENU)))
+  const _images = ref(loadImages())
+
+  // Chargement Firestore (non bloquant)
+  getDoc(doc(db, 'config', 'menu')).then(snap => {
+    if (snap.exists()) {
+      const saved = snap.data()
+      // Migration : garantit tags/allergens
+      saved.categories?.forEach(cat => {
+        cat.items?.forEach(item => {
           if (!item.tags) item.tags = []
           if (!item.allergens) item.allergens = []
         })
       })
-      return parsed
-    } catch { return DEFAULT_MENU }
-  }
+      data.value = { categories: mergeImages(saved.categories || [], _images.value) }
+    }
+  }).catch(console.error)
 
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(data.value))
+  async function save() {
+    // Sauvegarde les images séparément
+    const images = {}
+    data.value.categories.forEach(cat => {
+      cat.items.forEach(item => { if (item.image) images[item.id] = item.image })
+    })
+    _images.value = images
+    saveImages(images)
+
+    // Firestore : sans les images
+    await setDoc(doc(db, 'config', 'menu'), {
+      categories: stripImages(JSON.parse(JSON.stringify(data.value.categories)))
+    })
   }
 
   function addCategory(cat) {

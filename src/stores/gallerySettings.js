@@ -1,14 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-const LS_KEY = 'laromate_gallery_settings'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
 export const LAYOUTS = [
   {
     id: 'uniform',
     label: 'Grille uniforme',
     desc: '3 colonnes, toutes identiques',
-    // SVG preview paths
     cells: [
       { x: 0,   y: 0,   w: 30, h: 28 },
       { x: 35,  y: 0,   w: 30, h: 28 },
@@ -75,18 +74,16 @@ export const LAYOUTS = [
 ]
 
 export const useGallerySettingsStore = defineStore('gallerySettings', () => {
-  const layout = ref(load())
+  const layout = ref('mosaic')
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      return raw ? JSON.parse(raw).layout || 'mosaic' : 'mosaic'
-    } catch { return 'mosaic' }
-  }
+  // Chargement Firestore (non bloquant)
+  getDoc(doc(db, 'config', 'galleryLayout')).then(snap => {
+    if (snap.exists()) layout.value = snap.data().layout || 'mosaic'
+  }).catch(console.error)
 
   function setLayout(id) {
     layout.value = id
-    localStorage.setItem(LS_KEY, JSON.stringify({ layout: id }))
+    setDoc(doc(db, 'config', 'galleryLayout'), { layout: id }).catch(console.error)
   }
 
   return { layout, setLayout }

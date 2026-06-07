@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-const LS_KEY = 'laromate_info'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
@@ -24,27 +24,21 @@ const DEFAULT_INFO = {
 }
 
 export const useInfoStore = defineStore('info', () => {
-  const data = ref(load())
+  const data = ref(JSON.parse(JSON.stringify(DEFAULT_INFO)))
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      if (!raw) return DEFAULT_INFO
-      const saved = JSON.parse(raw)
-      // Migration : ajoute lunchOpen/dinnerOpen si absents (données existantes)
+  // Chargement Firestore (non bloquant — affiche les défauts pendant le load)
+  getDoc(doc(db, 'config', 'info')).then(snap => {
+    if (snap.exists()) {
+      const saved = snap.data()
       if (saved.hours) {
-        saved.hours = saved.hours.map(h => ({
-          lunchOpen:  true,
-          dinnerOpen: true,
-          ...h
-        }))
+        saved.hours = saved.hours.map(h => ({ lunchOpen: true, dinnerOpen: true, ...h }))
       }
-      return saved
-    } catch { return DEFAULT_INFO }
-  }
+      Object.assign(data.value, saved)
+    }
+  }).catch(console.error)
 
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(data.value))
+  async function save() {
+    await setDoc(doc(db, 'config', 'info'), JSON.parse(JSON.stringify(data.value)))
   }
 
   function update(fields) {

@@ -1,40 +1,42 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-
-const LS_KEY = 'laromate_promotions'
+import { collection, getDocs, setDoc, deleteDoc, doc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
 export const usePromotionsStore = defineStore('promotions', () => {
-  const items = ref(load())
+  const items = ref([])
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      return raw ? JSON.parse(raw) : []
-    } catch { return [] }
+  // Chargement Firestore (non bloquant)
+  getDocs(collection(db, 'promos')).then(snap => {
+    items.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  }).catch(console.error)
+
+  async function add(promo) {
+    const id = crypto.randomUUID()
+    const newPromo = { ...promo, id, active: true }
+    items.value.push(newPromo)
+    await setDoc(doc(db, 'promos', id), newPromo)
   }
 
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(items.value))
-  }
-
-  function add(promo) {
-    items.value.push({ ...promo, id: crypto.randomUUID(), active: true })
-    save()
-  }
-
-  function update(id, fields) {
+  async function update(id, fields) {
     const p = items.value.find(p => p.id === id)
-    if (p) { Object.assign(p, fields); save() }
+    if (p) {
+      Object.assign(p, fields)
+      await setDoc(doc(db, 'promos', id), JSON.parse(JSON.stringify(p)))
+    }
   }
 
-  function remove(id) {
+  async function remove(id) {
     items.value = items.value.filter(p => p.id !== id)
-    save()
+    await deleteDoc(doc(db, 'promos', id))
   }
 
-  function toggle(id) {
+  async function toggle(id) {
     const p = items.value.find(p => p.id === id)
-    if (p) { p.active = !p.active; save() }
+    if (p) {
+      p.active = !p.active
+      await setDoc(doc(db, 'promos', id), JSON.parse(JSON.stringify(p)))
+    }
   }
 
   const active = computed(() => {

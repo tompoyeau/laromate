@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
-const LS_KEY = 'laromate_theme'
+// Le logo (base64) reste en localStorage — trop lourd pour Firestore
+const LS_LOGO = 'laromate_theme_logo'
 
 const DEFAULT_THEME = {
   primaryColor: '#6b7c5c',
@@ -11,23 +14,30 @@ const DEFAULT_THEME = {
   bgColor: '#f9f7f4',
   restaurantName: "L'Aromate",
   restaurantTagline: "Burgers & Sandwichs artisanaux",
-  logo: null,
   fontHeading: 'Playfair Display',
   darkMode: false
 }
 
 export const useThemeStore = defineStore('theme', () => {
-  const theme = ref(load())
+  const theme = ref({ ...DEFAULT_THEME, logo: loadLogo() })
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      return raw ? { ...DEFAULT_THEME, ...JSON.parse(raw) } : { ...DEFAULT_THEME }
-    } catch { return { ...DEFAULT_THEME } }
+  function loadLogo() {
+    try { return localStorage.getItem(LS_LOGO) || null } catch { return null }
   }
 
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(theme.value))
+  // Chargement Firestore (non bloquant)
+  getDoc(doc(db, 'config', 'theme')).then(snap => {
+    if (snap.exists()) {
+      Object.assign(theme.value, snap.data())
+      applyTheme()
+    }
+  }).catch(console.error)
+
+  async function save() {
+    // On ne persiste pas le logo dans Firestore
+    const { logo, ...rest } = theme.value
+    await setDoc(doc(db, 'config', 'theme'), JSON.parse(JSON.stringify(rest)))
+    if (logo) localStorage.setItem(LS_LOGO, logo)
   }
 
   function applyTheme() {
@@ -56,7 +66,6 @@ export const useThemeStore = defineStore('theme', () => {
     applyTheme()
   }
 
-  // Auto-apply on changes
   watch(theme, () => applyTheme(), { deep: true })
 
   return { theme, darkMode: ref(theme.value.darkMode), update, applyTheme, toggleDark }

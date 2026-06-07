@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-
-const LS_KEY = 'laromate_reviews'
+import { collection, getDocs, setDoc, deleteDoc, doc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
 const DEMO_REVIEWS = [
   { id: '1', author: 'Marie L.', rating: 5, text: "Une vraie pépite ! Le burger L'Aromate avec sa burrata et son pesto maison est absolument incroyable. L'ambiance est chaleureuse et le service impeccable.", date: '2026-05-20', visible: true, createdAt: Date.now() - 86400000 * 15 },
@@ -12,41 +12,43 @@ const DEMO_REVIEWS = [
 ]
 
 export const useReviewsStore = defineStore('reviews', () => {
-  const items = ref(load())
+  const items = ref([])
+  const loaded = ref(false)
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      return raw ? JSON.parse(raw) : DEMO_REVIEWS
-    } catch { return DEMO_REVIEWS }
+  // Chargement Firestore — charge les démos si la collection est vide
+  getDocs(collection(db, 'reviews')).then(async snap => {
+    if (snap.empty) {
+      // Première utilisation : seed avec les démos
+      items.value = [...DEMO_REVIEWS]
+      await Promise.all(DEMO_REVIEWS.map(r => setDoc(doc(db, 'reviews', r.id), r)))
+    } else {
+      items.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    }
+    loaded.value = true
+  }).catch(console.error)
+
+  async function add(review) {
+    const id = crypto.randomUUID()
+    const newReview = { ...review, id, visible: false, createdAt: Date.now() }
+    items.value.unshift(newReview)
+    await setDoc(doc(db, 'reviews', id), newReview)
   }
 
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(items.value))
-  }
-
-  function add(review) {
-    items.value.unshift({
-      ...review,
-      id: crypto.randomUUID(),
-      visible: false, // pending moderation
-      createdAt: Date.now()
-    })
-    save()
-  }
-
-  function toggleVisibility(id) {
+  async function toggleVisibility(id) {
     const r = items.value.find(r => r.id === id)
-    if (r) { r.visible = !r.visible; save() }
+    if (r) {
+      r.visible = !r.visible
+      await setDoc(doc(db, 'reviews', id), JSON.parse(JSON.stringify(r)))
+    }
   }
 
-  function remove(id) {
+  async function remove(id) {
     items.value = items.value.filter(r => r.id !== id)
-    save()
+    await deleteDoc(doc(db, 'reviews', id))
   }
 
-  const visible = computed(() => items.value.filter(r => r.visible))
-  const pending = computed(() => items.value.filter(r => !r.visible))
+  const visible   = computed(() => items.value.filter(r => r.visible))
+  const pending   = computed(() => items.value.filter(r => !r.visible))
   const avgRating = computed(() => {
     if (!visible.value.length) return 0
     return (visible.value.reduce((sum, r) => sum + r.rating, 0) / visible.value.length).toFixed(1)

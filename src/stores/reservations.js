@@ -1,53 +1,55 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { collection, onSnapshot, doc, setDoc, deleteDoc, getDoc, getDocs } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
-const LS_KEY      = 'laromate_reservations'
-const LS_SETTINGS = 'laromate_res_settings'
-
-const TODAY = new Date().toISOString().split('T')[0]
+const TODAY    = new Date().toISOString().split('T')[0]
 const TOMORROW = new Date(Date.now() + 86400000).toISOString().split('T')[0]
 
 const DEMO = [
-  { id: '1', name: 'Marie Dupont',    email: 'marie@example.com',  phone: '06 12 34 56 78', date: TODAY,    time: '12:30', covers: 2, message: '',            note: '',              status: 'confirmed', createdAt: Date.now() - 3600000  },
-  { id: '2', name: 'Thomas Bernard',  email: 'thomas@example.com', phone: '06 98 76 54 32', date: TODAY,    time: '20:00', covers: 4, message: 'Anniversaire', note: 'Table en fond', status: 'pending',   createdAt: Date.now() - 7200000  },
-  { id: '3', name: 'Sophie Martin',   email: 'sophie@example.com', phone: '07 11 22 33 44', date: TODAY,    time: '19:30', covers: 3, message: '',            note: '',              status: 'confirmed', createdAt: Date.now() - 1800000  },
-  { id: '4', name: 'Lucas Petit',     email: 'lucas@example.com',  phone: '06 55 44 33 22', date: TODAY,    time: '12:00', covers: 5, message: 'Déjeuner pro', note: '',             status: 'confirmed', createdAt: Date.now() - 5000000  },
-  { id: '5', name: 'Emma Richard',    email: 'emma@example.com',   phone: '07 66 77 88 99', date: TOMORROW, time: '19:00', covers: 2, message: '',            note: '',              status: 'pending',   createdAt: Date.now() - 900000   },
-  { id: '6', name: 'Paul Durand',     email: 'paul@example.com',   phone: '06 22 11 00 99', date: TOMORROW, time: '20:30', covers: 6, message: 'Dîner familia', note: '',            status: 'pending',   createdAt: Date.now() - 400000   },
+  { id: '1', name: 'Marie Dupont',   email: 'marie@example.com',  phone: '06 12 34 56 78', date: TODAY,    time: '12:30', covers: 2, message: '',             note: '',              status: 'confirmed', createdAt: Date.now() - 3600000  },
+  { id: '2', name: 'Thomas Bernard', email: 'thomas@example.com', phone: '06 98 76 54 32', date: TODAY,    time: '20:00', covers: 4, message: 'Anniversaire',  note: 'Table en fond', status: 'pending',   createdAt: Date.now() - 7200000  },
+  { id: '3', name: 'Sophie Martin',  email: 'sophie@example.com', phone: '07 11 22 33 44', date: TODAY,    time: '19:30', covers: 3, message: '',             note: '',              status: 'confirmed', createdAt: Date.now() - 1800000  },
+  { id: '4', name: 'Lucas Petit',    email: 'lucas@example.com',  phone: '06 55 44 33 22', date: TODAY,    time: '12:00', covers: 5, message: 'Déjeuner pro', note: '',              status: 'confirmed', createdAt: Date.now() - 5000000  },
+  { id: '5', name: 'Emma Richard',   email: 'emma@example.com',   phone: '07 66 77 88 99', date: TOMORROW, time: '19:00', covers: 2, message: '',             note: '',              status: 'pending',   createdAt: Date.now() - 900000   },
+  { id: '6', name: 'Paul Durand',    email: 'paul@example.com',   phone: '06 22 11 00 99', date: TOMORROW, time: '20:30', covers: 6, message: 'Dîner familia', note: '',             status: 'pending',   createdAt: Date.now() - 400000   },
 ]
 
 const DEFAULT_SETTINGS = {
-  maxCoversPerSlot:    12,   // max couverts par créneau de 15 min
-  maxCoversLunch:      40,   // max couverts sur tout le service déjeuner
-  maxCoversDinner:     60,   // max couverts sur tout le service dîner
+  maxCoversPerSlot: 12,
+  maxCoversLunch:   40,
+  maxCoversDinner:  60,
 }
 
 export const useReservationsStore = defineStore('reservations', () => {
-  const items    = ref(loadItems())
-  const settings = ref(loadSettings())
+  const items    = ref([])
+  const settings = ref({ ...DEFAULT_SETTINGS })
 
-  function loadItems() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      if (!raw) return DEMO
-      // Migration : ajoute `note` si absent
-      return JSON.parse(raw).map(r => ({ note: '', ...r }))
-    } catch { return DEMO }
+  // ── Écoute temps réel (onSnapshot) ──────────────────────────────────────
+  // L'admin panel se met à jour dès qu'un client soumet une réservation
+  onSnapshot(collection(db, 'reservations'), snap => {
+    items.value = snap.docs
+      .map(d => ({ note: '', ...d.data(), id: d.id }))
+  }, console.error)
+
+  // ── Paramètres capacité ──────────────────────────────────────────────────
+  getDoc(doc(db, 'config', 'resSettings')).then(snap => {
+    if (snap.exists()) Object.assign(settings.value, snap.data())
+    else {
+      // Seed démos si collection vide
+      getDemosAndSeed()
+    }
+  }).catch(console.error)
+
+  async function getDemosAndSeed() {
+    const snap = await getDocs(collection(db, 'reservations'))
+    if (snap.empty) {
+      await Promise.all(DEMO.map(r => setDoc(doc(db, 'reservations', r.id), r)))
+    }
   }
 
-  function loadSettings() {
-    try {
-      const raw = localStorage.getItem(LS_SETTINGS)
-      return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS }
-    } catch { return { ...DEFAULT_SETTINGS } }
-  }
-
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(items.value))
-  }
-
-  function saveSettings() {
-    localStorage.setItem(LS_SETTINGS, JSON.stringify(settings.value))
+  async function saveSettings() {
+    await setDoc(doc(db, 'config', 'resSettings'), JSON.parse(JSON.stringify(settings.value)))
   }
 
   function updateSettings(fields) {
@@ -55,55 +57,53 @@ export const useReservationsStore = defineStore('reservations', () => {
     saveSettings()
   }
 
-  // ── CRUD ────────────────────────────────────────────────────────────────
-  function add(reservation) {
-    items.value.unshift({
-      ...reservation,
-      id: crypto.randomUUID(),
-      note: '',
-      status: 'pending',
-      createdAt: Date.now()
-    })
-    save()
-    return items.value[0]
+  // ── CRUD ─────────────────────────────────────────────────────────────────
+  async function add(reservation) {
+    const id = crypto.randomUUID()
+    const newRes = { ...reservation, id, note: '', status: 'pending', createdAt: Date.now() }
+    await setDoc(doc(db, 'reservations', id), newRes)
+    // onSnapshot met à jour items automatiquement
+    return newRes
   }
 
-  function updateStatus(id, status) {
+  async function updateStatus(id, status) {
     const r = items.value.find(r => r.id === id)
-    if (r) { r.status = status; save() }
+    if (r) {
+      r.status = status
+      await setDoc(doc(db, 'reservations', id), JSON.parse(JSON.stringify(r)))
+    }
   }
 
-  function updateNote(id, note) {
+  async function updateNote(id, note) {
     const r = items.value.find(r => r.id === id)
-    if (r) { r.note = note; save() }
+    if (r) {
+      r.note = note
+      await setDoc(doc(db, 'reservations', id), JSON.parse(JSON.stringify(r)))
+    }
   }
 
-  function remove(id) {
+  async function remove(id) {
     items.value = items.value.filter(r => r.id !== id)
-    save()
+    await deleteDoc(doc(db, 'reservations', id))
   }
 
   // ── Capacité ─────────────────────────────────────────────────────────────
-  // Couverts actifs (en attente + confirmé) sur un créneau précis
   function coversAt(date, time) {
     return items.value
       .filter(r => r.date === date && r.time === time && ['pending', 'confirmed'].includes(r.status))
       .reduce((sum, r) => sum + r.covers, 0)
   }
 
-  // Créneau complet ?
   function isSlotFull(date, time) {
     return coversAt(date, time) >= settings.value.maxCoversPerSlot
   }
 
-  // Couverts actifs sur un jour donné (pour stats calendrier)
   function coversOnDay(date) {
     return items.value
       .filter(r => r.date === date && ['pending', 'confirmed'].includes(r.status))
       .reduce((sum, r) => sum + r.covers, 0)
   }
 
-  // Réservations d'un jour trié par heure
   function reservationsOnDay(date) {
     return [...items.value]
       .filter(r => r.date === date)
