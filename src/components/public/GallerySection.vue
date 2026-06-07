@@ -2,12 +2,12 @@
   <section id="gallery" class="section gallery-section">
     <div class="container">
       <div class="section-header fade-up">
-        <p class="section-label">Atmosphère</p>
-        <h2 class="section-title">La Galerie</h2>
-        <p class="section-subtitle">Une cuisine authentique dans un cadre chaleureux</p>
+        <p class="section-label">{{ content.data.galleryLabel }}</p>
+        <h2 class="section-title">{{ content.data.galleryTitle }}</h2>
+        <p class="section-subtitle">{{ content.data.gallerySubtitle }}</p>
       </div>
 
-      <div v-if="gallery.photos.length" class="gallery-grid fade-up">
+      <div v-if="gallery.photos.length" class="gallery-grid" :class="`layout-${settings.layout}`">
         <div
           v-for="(photo, i) in gallery.photos"
           :key="photo.id"
@@ -45,17 +45,48 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGalleryStore } from '@/stores/gallery.js'
+import { useGallerySettingsStore } from '@/stores/gallerySettings.js'
+import { useContentStore } from '@/stores/content.js'
 
-const gallery = useGalleryStore()
-onMounted(() => gallery.loadAll())
+const gallery  = useGalleryStore()
+const settings = useGallerySettingsStore()
+const content  = useContentStore()
 
-const lightboxOpen = ref(false)
-const lightboxIdx = ref(0)
+// Recharge depuis IndexedDB au montage et quand l'onglet reprend le focus
+function reload() { gallery.loadAll() }
+onMounted(() => {
+  reload()
+  window.addEventListener('focus', reload)
+})
+onUnmounted(() => window.removeEventListener('focus', reload))
+
+// ─── Patterns de grille ────────────────────────────────────────────────────
+// Chaque fonction reçoit l'index de la photo et retourne des classes CSS
+const PATTERNS = {
+  // 3 colonnes égales — clean et simple
+  uniform:  () => '',
+
+  // 4 colonnes — alternance tall/wide, style magazine
+  mosaic:   i => ['', 'span-2r', '', 'span-2c', '', '', 'span-2r', ''][i % 8],
+
+  // 3 colonnes — 1re photo vedette (2×2), reste normal
+  featured: i => i === 0 ? 'span-2c span-2r' : '',
+
+  // 4 colonnes égales — style Instagram
+  columns:  () => '',
+
+  // 2 grandes colonnes — alternance de photos verticales
+  duo:      i => ['span-2r', '', '', 'span-2r'][i % 4],
+}
 
 function getClass(i) {
-  const classes = ['', 'tall', '', 'wide', '', '', 'tall', '']
-  return classes[i % classes.length]
+  const fn = PATTERNS[settings.layout] || PATTERNS.mosaic
+  return fn(i)
 }
+
+// ─── Lightbox ──────────────────────────────────────────────────────────────
+const lightboxOpen = ref(false)
+const lightboxIdx  = ref(0)
 
 function openLightbox(i) { lightboxOpen.value = true; lightboxIdx.value = i }
 function closeLightbox() { lightboxOpen.value = false }
@@ -77,22 +108,41 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
 .gallery-section { background: var(--bg-card); }
 .section-header { text-align: center; }
 
+/* ── Grille ──────────────────────────────────────────────────────────────── */
 .gallery-grid {
   display: grid;
+  gap: 0.75rem;
+  /* défaut fallback */
   grid-template-columns: repeat(4, 1fr);
   grid-auto-rows: 220px;
-  gap: 0.75rem;
 }
 
+/* Grille uniforme — 3 colonnes toutes égales */
+.layout-uniform  { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 230px; }
+
+/* Mosaïque — 4 colonnes mix tall/wide */
+.layout-mosaic   { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 220px; }
+
+/* Vedette — 3 colonnes, 1re photo grande */
+.layout-featured { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 200px; }
+
+/* Colonnes — 4 colonnes régulières, style Instagram */
+.layout-columns  { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 200px; }
+
+/* Duo — 2 grandes colonnes */
+.layout-duo      { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 280px; }
+
+/* ── Classes de span ─────────────────────────────────────────────────────── */
+.span-2c { grid-column: span 2; }
+.span-2r { grid-row: span 2; }
+
+/* ── Item ────────────────────────────────────────────────────────────────── */
 .gallery-item {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius);
   cursor: pointer;
 }
-
-.gallery-item.tall  { grid-row: span 2; }
-.gallery-item.wide  { grid-column: span 2; }
 
 .gallery-item img {
   width: 100%; height: 100%;
@@ -121,7 +171,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   font-style: italic;
 }
 
-/* Lightbox */
+/* ── Lightbox ────────────────────────────────────────────────────────────── */
 .lightbox {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.95);
@@ -144,7 +194,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   border-radius: var(--radius-sm);
   transition: background 0.2s;
 }
-
 .lb-close:hover { background: rgba(255,255,255,0.2); }
 
 .lb-prev, .lb-next {
@@ -156,7 +205,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   border-radius: var(--radius-sm);
   transition: background 0.2s;
 }
-
 .lb-prev { left: 1.5rem; }
 .lb-next { right: 1.5rem; }
 .lb-prev:hover, .lb-next:hover { background: rgba(255,255,255,0.2); }
@@ -169,8 +217,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
 .lightbox-enter-active, .lightbox-leave-active { transition: opacity 0.25s ease; }
 .lightbox-enter-from, .lightbox-leave-to { opacity: 0; }
 
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .gallery-grid { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 160px; }
-  .gallery-item.wide { grid-column: span 1; }
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-auto-rows: 160px !important;
+  }
+  /* Annule les spans sur mobile pour éviter des cellules trop grandes */
+  .span-2c { grid-column: span 1 !important; }
+  .span-2r { grid-row: span 1 !important; }
 }
 </style>

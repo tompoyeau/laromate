@@ -47,9 +47,9 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Lien Google Maps Embed</label>
-          <textarea v-model="form.mapsEmbed" class="form-textarea" rows="3" placeholder='<iframe src="https://www.google.com/maps/embed?…"></iframe>'></textarea>
-          <p class="form-hint">Google Maps → Partager → Intégrer une carte → copier l'URL src de l'iframe</p>
+          <label class="form-label">Google Maps Embed</label>
+          <textarea v-model="form.mapsEmbed" class="form-textarea" rows="3" placeholder="Coller ici le tag iframe complet ou uniquement l'URL src"></textarea>
+          <p class="form-hint">Google Maps → Partager → Intégrer une carte → copier le code iframe complet (ou juste l'URL). Les deux formats sont acceptés.</p>
         </div>
       </div>
 
@@ -57,7 +57,9 @@
       <div class="card info-section hours-section">
         <div class="section-head">🕐 Horaires d'ouverture</div>
         <div class="hours-list">
-          <div v-for="(h, i) in form.hours" :key="h.day" class="hour-row">
+          <div v-for="h in form.hours" :key="h.day" class="hour-row">
+
+            <!-- Nom du jour + toggle ouvert/fermé -->
             <div class="day-toggle">
               <label class="toggle">
                 <input type="checkbox" v-model="h.open" />
@@ -65,19 +67,44 @@
               </label>
               <span class="day-name" :class="{ closed: !h.open }">{{ h.day }}</span>
             </div>
-            <div class="hour-inputs" v-if="h.open">
-              <div class="service-group">
-                <span class="service-label">Déj.</span>
-                <input v-model="h.lunch.from" type="time" class="time-input" />
-                <span class="time-sep">–</span>
-                <input v-model="h.lunch.to" type="time" class="time-input" />
+
+            <!-- Services (visible seulement si le jour est ouvert) -->
+            <div v-if="h.open" class="hour-services">
+
+              <!-- Déjeuner -->
+              <div class="service-line">
+                <label class="service-toggle">
+                  <label class="toggle toggle-sm">
+                    <input type="checkbox" v-model="h.lunchOpen" />
+                    <span class="toggle-track"><span class="toggle-thumb" /></span>
+                  </label>
+                  <span class="service-label" :class="{ 'service-off': !h.lunchOpen }">Midi</span>
+                </label>
+                <div v-if="h.lunchOpen" class="service-times">
+                  <input v-model="h.lunch.from" type="time" class="time-input" />
+                  <span class="time-sep">–</span>
+                  <input v-model="h.lunch.to" type="time" class="time-input" />
+                </div>
+                <span v-else class="service-closed-tag">Fermé le midi</span>
               </div>
-              <div class="service-group">
-                <span class="service-label">Dîner</span>
-                <input v-model="h.dinner.from" type="time" class="time-input" />
-                <span class="time-sep">–</span>
-                <input v-model="h.dinner.to" type="time" class="time-input" />
+
+              <!-- Dîner -->
+              <div class="service-line">
+                <label class="service-toggle">
+                  <label class="toggle toggle-sm">
+                    <input type="checkbox" v-model="h.dinnerOpen" />
+                    <span class="toggle-track"><span class="toggle-thumb" /></span>
+                  </label>
+                  <span class="service-label" :class="{ 'service-off': !h.dinnerOpen }">Soir</span>
+                </label>
+                <div v-if="h.dinnerOpen" class="service-times">
+                  <input v-model="h.dinner.from" type="time" class="time-input" />
+                  <span class="time-sep">–</span>
+                  <input v-model="h.dinner.to" type="time" class="time-input" />
+                </div>
+                <span v-else class="service-closed-tag">Fermé le soir</span>
               </div>
+
             </div>
             <div v-else class="closed-label">Fermé</div>
           </div>
@@ -121,30 +148,73 @@ function saveAll() {
 
 .hours-section .form-group { flex: 1; }
 
-.hours-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.hours-list { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .hour-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.65rem 0.75rem;
   background: var(--bg);
   border-radius: var(--radius-sm);
   flex-wrap: wrap;
 }
 
-.day-toggle { display: flex; align-items: center; gap: 0.6rem; width: 130px; flex-shrink: 0; }
+.day-toggle {
+  display: flex; align-items: center; gap: 0.6rem;
+  width: 120px; flex-shrink: 0;
+  padding-top: 0.2rem;
+}
 .day-name { font-size: 0.9rem; font-weight: 500; }
 .day-name.closed { color: var(--text-muted); }
 
-.hour-inputs { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+/* Services */
+.hour-services { display: flex; flex-direction: column; gap: 0.45rem; flex: 1; }
 
-.service-group { display: flex; align-items: center; gap: 0.4rem; }
-.service-label { font-size: 0.75rem; color: var(--text-muted); width: 40px; flex-shrink: 0; }
-.time-input { padding: 0.35rem 0.5rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; background: var(--bg-card); color: var(--text); font-family: var(--font-body); }
-.time-sep { color: var(--text-muted); }
+.service-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
 
-.closed-label { font-size: 0.85rem; color: var(--text-muted); font-style: italic; }
+.service-toggle {
+  display: flex; align-items: center; gap: 0.45rem;
+  cursor: pointer; width: 80px; flex-shrink: 0;
+}
+
+.service-label {
+  font-size: 0.82rem; font-weight: 500; color: var(--text);
+  user-select: none;
+}
+.service-label.service-off { color: var(--text-muted); }
+
+.service-times { display: flex; align-items: center; gap: 0.35rem; }
+
+.service-closed-tag {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Toggle taille réduite */
+.toggle-sm .toggle-track { width: 30px; height: 17px; }
+.toggle-sm .toggle-thumb { width: 13px; height: 13px; }
+.toggle-sm input:checked + .toggle-track .toggle-thumb { left: 15px; }
+
+.time-input {
+  padding: 0.3rem 0.45rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.time-sep { color: var(--text-muted); font-size: 0.85rem; }
+
+.closed-label { font-size: 0.85rem; color: var(--text-muted); font-style: italic; padding-top: 0.15rem; }
 
 /* Toggle */
 .toggle { display: flex; align-items: center; cursor: pointer; }

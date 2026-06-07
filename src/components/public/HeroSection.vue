@@ -1,18 +1,15 @@
 <template>
   <section id="hero" class="hero">
-    <div class="hero-bg">
+    <div class="hero-bg" :style="{ backgroundImage: `url(${content.heroImageSrc()})` }">
       <div class="hero-overlay" />
     </div>
     <div class="hero-content container">
       <div class="hero-text fade-up visible">
-        <p class="hero-label">Restaurant · Bordeaux</p>
+        <p class="hero-label">{{ content.data.heroLabel }}</p>
         <h1 class="hero-title">
-          <em>L'art du</em><br>burger artisanal
+          <em>{{ content.data.heroTitle1 }}</em><br>{{ content.data.heroTitle2 }}
         </h1>
-        <p class="hero-desc">
-          Des produits frais, des recettes maison et une passion pour les saveurs.<br>
-          Burgers, sandwichs, pâtes et salades préparés avec soin.
-        </p>
+        <p class="hero-desc">{{ content.data.heroDesc }}</p>
         <div class="hero-actions">
           <button class="btn btn-primary hero-btn" @click="scrollTo('reservation')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -25,9 +22,9 @@
       </div>
       <div class="hero-badge">
         <div class="badge-circle">
-          <span class="badge-top">Fait</span>
-          <span class="badge-main">Maison</span>
-          <span class="badge-bottom">depuis 2020</span>
+          <span class="badge-top">{{ content.data.heroBadgeTop }}</span>
+          <span class="badge-main">{{ content.data.heroBadgeMain }}</span>
+          <span class="badge-bottom">{{ content.data.heroBadgeSub }}</span>
         </div>
       </div>
     </div>
@@ -39,6 +36,9 @@
 </template>
 
 <script setup>
+import { useContentStore } from '@/stores/content.js'
+const content = useContentStore()
+
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
@@ -56,7 +56,9 @@ function scrollTo(id) {
 .hero-bg {
   position: absolute;
   inset: 0;
-  background: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1600&auto=format&fit=crop') center/cover no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .hero-overlay {
@@ -134,9 +136,7 @@ function scrollTo(id) {
 
 .hero-btn-outline:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.8); }
 
-.hero-badge {
-  flex-shrink: 0;
-}
+.hero-badge { flex-shrink: 0; }
 
 .badge-circle {
   width: 160px;
@@ -165,6 +165,7 @@ function scrollTo(id) {
   font-size: 1.8rem;
   color: #fff;
   line-height: 1;
+  animation: counter-rotate 20s linear infinite;
 }
 
 .badge-bottom {
@@ -177,8 +178,6 @@ function scrollTo(id) {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-
-.badge-main { animation: counter-rotate 20s linear infinite; }
 
 @keyframes counter-rotate {
   from { transform: rotate(0deg); }

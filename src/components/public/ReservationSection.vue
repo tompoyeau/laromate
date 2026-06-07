@@ -3,11 +3,9 @@
     <div class="container">
       <div class="reservation-inner">
         <div class="res-info fade-up">
-          <p class="section-label">Réserver</p>
-          <h2 class="section-title">Votre table<br>vous attend</h2>
-          <p class="res-desc">
-            Réservez en ligne en quelques secondes. Nous vous confirmerons votre réservation dans les plus brefs délais.
-          </p>
+          <p class="section-label">{{ content.data.reservationLabel }}</p>
+          <h2 class="section-title">{{ content.data.reservationTitle }}<br>{{ content.data.reservationTitle2 }}</h2>
+          <p class="res-desc">{{ content.data.reservationDesc }}</p>
           <div class="res-perks">
             <div class="perk" v-for="p in perks" :key="p.icon">
               <div class="perk-icon">{{ p.icon }}</div>
@@ -57,16 +55,24 @@
                       <p class="slot-label">Déjeuner</p>
                       <div class="slots">
                         <button type="button" v-for="t in lunchSlots" :key="t"
-                          :class="['slot', { active: form.time === t }]"
-                          @click="form.time = t">{{ t }}</button>
+                          :class="['slot', { active: form.time === t, full: isSlotFull(t) }]"
+                          :disabled="isSlotFull(t)"
+                          @click="!isSlotFull(t) && (form.time = t)">
+                          {{ t }}
+                          <span v-if="isSlotFull(t)" class="slot-full-tag">Complet</span>
+                        </button>
                       </div>
                     </div>
                     <div class="slot-group">
                       <p class="slot-label">Dîner</p>
                       <div class="slots">
                         <button type="button" v-for="t in dinnerSlots" :key="t"
-                          :class="['slot', { active: form.time === t }]"
-                          @click="form.time = t">{{ t }}</button>
+                          :class="['slot', { active: form.time === t, full: isSlotFull(t) }]"
+                          :disabled="isSlotFull(t)"
+                          @click="!isSlotFull(t) && (form.time = t)">
+                          {{ t }}
+                          <span v-if="isSlotFull(t)" class="slot-full-tag">Complet</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -97,12 +103,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useReservationsStore } from '@/stores/reservations.js'
 import { useToast } from '@/composables/useToast.js'
+import { useContentStore } from '@/stores/content.js'
 
 const reservations = useReservationsStore()
 const { success } = useToast()
+const content = useContentStore()
 
 const loading = ref(false)
 const submitted = ref(false)
@@ -111,6 +119,12 @@ const minDate = new Date().toISOString().split('T')[0]
 
 const lunchSlots = ['12:00', '12:15', '12:30', '12:45', '13:00', '13:15', '13:30', '13:45', '14:00', '14:15']
 const dinnerSlots = ['19:00', '19:15', '19:30', '19:45', '20:00', '20:15', '20:30', '20:45', '21:00', '21:15', '21:30']
+
+// Vérifie si un créneau est complet pour la date sélectionnée
+function isSlotFull(time) {
+  if (!form.value.date) return false
+  return reservations.isSlotFull(form.value.date, time)
+}
 
 const defaultForm = () => ({ name: '', email: '', phone: '', date: minDate, time: '', covers: 2, message: '' })
 const form = ref(defaultForm())
@@ -218,7 +232,30 @@ function formatDate(d) {
   color: #fff;
 }
 
-.slot:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+.slot:hover:not(.active):not(.full) { border-color: var(--primary); color: var(--primary); }
+
+.slot.full {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.slot-full-tag {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #ef4444;
+  line-height: 1;
+}
 
 .success-screen { text-align: center; padding: 2rem 1rem; }
 

@@ -98,7 +98,7 @@ const reservations = useReservationsStore()
 const reviews = useReviewsStore()
 const menu = useMenuStore()
 
-const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé' }
+const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', noshow: 'No-show' }
 
 const stats = computed(() => [
   {

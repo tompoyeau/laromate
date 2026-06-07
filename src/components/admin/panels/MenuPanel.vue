@@ -33,14 +33,20 @@
 
       <div class="items-grid">
         <div v-for="item in currentCat.items" :key="item.id" class="item-card card">
-          <div class="item-head">
-            <span class="item-name">{{ item.name }}</span>
-            <span class="item-price">{{ item.price }}</span>
+          <!-- Thumbnail si l'item a une image -->
+          <div v-if="item.image" class="item-thumb">
+            <img :src="item.image" :alt="item.name" />
           </div>
-          <p class="item-desc" v-if="item.desc">{{ item.desc }}</p>
-          <div class="item-tags" v-if="item.tags?.length || item.allergens?.length">
-            <span v-for="t in item.tags" :key="t" :class="['badge', `badge-${t}`]">{{ TAG_LABELS[t] }}</span>
-            <span v-for="a in item.allergens" :key="a" class="badge allergen-badge">{{ a }}</span>
+          <div class="item-body">
+            <div class="item-head">
+              <span class="item-name">{{ item.name }}</span>
+              <span class="item-price">{{ item.price }}</span>
+            </div>
+            <p class="item-desc" v-if="item.desc">{{ item.desc }}</p>
+            <div class="item-tags" v-if="item.tags?.length || item.allergens?.length">
+              <span v-for="t in item.tags" :key="t" :class="['badge', `badge-${t}`]">{{ TAG_LABELS[t] }}</span>
+              <span v-for="a in item.allergens" :key="a" class="badge allergen-badge">{{ a }}</span>
+            </div>
           </div>
           <div class="item-actions">
             <button class="btn-icon" @click="openEditItem(item)" title="Modifier">
@@ -74,7 +80,31 @@
     </AppModal>
 
     <!-- Item Modal -->
-    <AppModal v-model="itemModal" :title="editingItem ? 'Modifier le plat' : 'Nouveau plat'">
+    <AppModal v-model="itemModal" :title="editingItem ? 'Modifier le plat' : 'Nouveau plat'" width="640px">
+
+      <!-- Image upload -->
+      <div class="form-group">
+        <label class="form-label">Photo du plat <span class="label-opt">(optionnel)</span></label>
+        <div v-if="itemForm.image" class="img-preview-wrap">
+          <img :src="itemForm.image" class="img-preview" alt="Aperçu" />
+          <button class="img-remove" @click="itemForm.image = ''" title="Supprimer la photo">✕</button>
+        </div>
+        <div
+          v-else
+          class="img-dropzone"
+          :class="{ dragging: imgDragging }"
+          @dragover.prevent="imgDragging = true"
+          @dragleave="imgDragging = false"
+          @drop.prevent="handleImgDrop"
+          @click="$refs.imgInput.click()"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Glisser une photo ou <u>cliquer</u></span>
+          <span class="dz-hint">JPG, PNG, WEBP · max 3 MB · recommandé : format carré ou 4:3</span>
+        </div>
+        <input ref="imgInput" type="file" accept="image/*" style="display:none" @change="handleImgFile" />
+      </div>
+
       <div class="form-group">
         <label class="form-label">Nom *</label>
         <input v-model="itemForm.name" class="form-input" placeholder="Le Classique" required />
@@ -150,10 +180,50 @@ const ALL_ALLERGENS = [
   { id: 'soy', label: 'Soja' }, { id: 'peanuts', label: 'Cacahuètes' },
 ]
 
-// Category modal
-const catModal = ref(false)
+// ── Image compression ────────────────────────────────────────────────────────
+const imgDragging = ref(false)
+
+function compressImage(file, maxW = 700, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    if (file.size > 3 * 1024 * 1024) { error('Image trop lourde (max 3 MB)'); resolve(''); return }
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new Image()
+      img.onload = () => {
+        const ratio = Math.min(maxW / img.width, maxW / img.height, 1)
+        const w = Math.round(img.width * ratio)
+        const h = Math.round(img.height * ratio)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.onerror = reject
+      img.src = e.target.result
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function handleImgFile(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  itemForm.value.image = await compressImage(file)
+  e.target.value = ''
+}
+
+async function handleImgDrop(e) {
+  imgDragging.value = false
+  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+  if (!file) return
+  itemForm.value.image = await compressImage(file)
+}
+
+// ── Category modal ────────────────────────────────────────────────────────────
+const catModal   = ref(false)
 const editingCat = ref(null)
-const catForm = ref({ name: '', subtitle: '' })
+const catForm    = ref({ name: '', subtitle: '' })
 
 function openAddCat() { editingCat.value = null; catForm.value = { name: '', subtitle: '' }; catModal.value = true }
 function openEditCat() {
@@ -179,36 +249,37 @@ function saveCat() {
 function deleteCat() {
   if (!confirm(`Supprimer "${currentCat.value.name}" et tous ses plats ?`)) return
   const cats = menu.data.categories
-  const idx = cats.findIndex(c => c.id === activeCat.value)
+  const idx  = cats.findIndex(c => c.id === activeCat.value)
   menu.deleteCategory(activeCat.value)
   activeCat.value = menu.data.categories[Math.max(0, idx - 1)]?.id || ''
   success('Catégorie supprimée')
 }
 
-// Item modal
-const itemModal = ref(false)
+// ── Item modal ────────────────────────────────────────────────────────────────
+const itemModal   = ref(false)
 const editingItem = ref(null)
-const itemForm = ref({ name: '', price: '', desc: '', tags: [], allergens: [] })
+const defaultItemForm = () => ({ name: '', price: '', desc: '', image: '', tags: [], allergens: [] })
+const itemForm = ref(defaultItemForm())
 
 function openAddItem() {
   editingItem.value = null
-  itemForm.value = { name: '', price: '', desc: '', tags: [], allergens: [] }
+  itemForm.value = defaultItemForm()
   itemModal.value = true
 }
 
 function openEditItem(item) {
   editingItem.value = item
-  itemForm.value = { ...item, tags: [...(item.tags || [])], allergens: [...(item.allergens || [])] }
+  itemForm.value = { ...defaultItemForm(), ...item, tags: [...(item.tags || [])], allergens: [...(item.allergens || [])] }
   itemModal.value = true
 }
 
 function saveItem() {
   if (!itemForm.value.name.trim() || !itemForm.value.price.trim()) return
   if (editingItem.value) {
-    menu.updateItem(activeCat.value, editingItem.value.id, itemForm.value)
+    menu.updateItem(activeCat.value, editingItem.value.id, { ...itemForm.value })
     success('Plat mis à jour')
   } else {
-    menu.addItem(activeCat.value, itemForm.value)
+    menu.addItem(activeCat.value, { ...itemForm.value })
     success('Plat ajouté')
   }
   itemModal.value = false
@@ -243,7 +314,6 @@ function deleteItem(id) {
   font-family: var(--font-body);
   transition: all 0.2s;
 }
-
 .cat-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg-card); }
 .cat-count { background: var(--border); color: var(--text-muted); font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 99px; }
 .cat-tab.active .cat-count { background: rgba(107, 124, 92, 0.15); color: var(--primary); }
@@ -255,7 +325,19 @@ function deleteItem(id) {
 
 .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.75rem; }
 
-.item-card { padding: 1rem; }
+/* ── Item card ───────────────────────────────────────────────────────────── */
+.item-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+.item-thumb {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.item-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+.item-card:hover .item-thumb img { transform: scale(1.04); }
+
+.item-body { padding: 0.9rem 1rem 0.5rem; flex: 1; }
 
 .item-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem; gap: 0.5rem; }
 .item-name { font-weight: 600; font-size: 0.95rem; }
@@ -264,12 +346,59 @@ function deleteItem(id) {
 .item-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
 .allergen-badge { background: var(--border); color: var(--text-muted); font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 99px; }
 
-.item-actions { display: flex; gap: 0.25rem; justify-content: flex-end; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+.item-actions { display: flex; gap: 0.25rem; justify-content: flex-end; padding: 0.5rem 1rem; border-top: 1px solid var(--border); }
 .danger:hover { background: #fee2e2; color: #dc2626; }
 
 .empty-cat { color: var(--text-muted); font-style: italic; padding: 1.5rem; text-align: center; grid-column: 1/-1; }
 .link { color: var(--primary); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; }
 
+/* ── Image upload in modal ──────────────────────────────────────────────── */
+.label-opt { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; margin-left: 0.3rem; }
+
+.img-preview-wrap {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.img-preview { width: 100%; height: 100%; object-fit: cover; }
+.img-remove {
+  position: absolute;
+  top: 0.5rem; right: 0.5rem;
+  width: 28px; height: 28px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.img-remove:hover { background: #dc2626; }
+
+.img-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-align: center;
+  transition: all 0.2s;
+}
+.img-dropzone:hover, .img-dropzone.dragging {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  color: var(--text);
+}
+.dz-hint { font-size: 0.75rem; color: var(--text-muted); }
+
+/* ── Tags / allergens pickers ───────────────────────────────────────────── */
 .tag-picker, .allergen-picker { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 
 .tag-opt, .allergen-opt {
@@ -281,7 +410,6 @@ function deleteItem(id) {
   transition: all 0.15s;
   user-select: none;
 }
-
 .tag-opt.active   { background: var(--primary); color: #fff; border-color: var(--primary); }
 .allergen-opt.active { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
 </style>

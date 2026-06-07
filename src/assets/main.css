@@ -29,6 +29,7 @@ ul, ol { list-style: none; }
   --font-body: 'Inter', sans-serif;
   --transition: 0.3s ease;
   --nav-h: 72px;
+  --promo-h: 0px;
 }
 
 /* ── BASE ─────────────────────────────────── */

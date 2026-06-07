@@ -61,7 +61,8 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 <style scoped>
 .navbar {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: var(--promo-h, 0px);
+  left: 0; right: 0;
   z-index: 1000;
   padding: 1.25rem 0;
   transition: all 0.3s ease;
@@ -161,7 +162,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   .nav-links {
     display: none;
     position: fixed;
-    top: var(--nav-h);
+    top: calc(var(--nav-h) + var(--promo-h, 0px));
     left: 0; right: 0;
     background: var(--bg-card);
     flex-direction: column;

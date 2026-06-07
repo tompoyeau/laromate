@@ -16,12 +16,23 @@
           <div class="hours-list">
             <div v-for="h in info.data.hours" :key="h.day" class="hour-row" :class="{ today: isToday(h.day) }">
               <span class="day-name">{{ h.day }}</span>
-              <span v-if="h.open" class="day-hours">
-                {{ h.lunch.from }} – {{ h.lunch.to }}
-                <span class="sep">&</span>
-                {{ h.dinner.from }} – {{ h.dinner.to }}
+              <span v-if="!h.open" class="day-closed">Fermé</span>
+              <span v-else class="day-hours">
+                <!-- Midi -->
+                <span v-if="h.lunchOpen !== false" class="service-slot">
+                  <span class="service-tag">Midi</span>
+                  {{ h.lunch.from }} – {{ h.lunch.to }}
+                </span>
+                <!-- Séparateur uniquement si les deux sont ouverts -->
+                <span v-if="h.lunchOpen !== false && h.dinnerOpen !== false" class="sep">·</span>
+                <!-- Soir -->
+                <span v-if="h.dinnerOpen !== false" class="service-slot">
+                  <span class="service-tag">Soir</span>
+                  {{ h.dinner.from }} – {{ h.dinner.to }}
+                </span>
+                <!-- Aucun service actif mais jour marqué ouvert -->
+                <span v-if="h.lunchOpen === false && h.dinnerOpen === false" class="day-closed">Fermé</span>
               </span>
-              <span v-else class="day-closed">Fermé</span>
             </div>
           </div>
         </div>
@@ -60,8 +71,8 @@
         </div>
 
         <!-- Map -->
-        <div v-if="info.data.mapsEmbed" class="info-map card fade-up">
-          <iframe :src="info.data.mapsEmbed" width="100%" height="100%" style="border:0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div v-if="mapsSrc" class="info-map card fade-up">
+          <iframe :src="mapsSrc" width="100%" height="100%" style="border:0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
         <div v-else class="info-map card fade-up map-placeholder">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -82,6 +93,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useInfoStore } from '@/stores/info.js'
 const info = useInfoStore()
 
@@ -90,6 +102,16 @@ const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 
 function isToday(dayName) {
   return DAYS_FR[new Date().getDay()] === dayName
 }
+
+// L'utilisateur peut coller soit l'URL brute, soit le tag <iframe> complet.
+// On extrait toujours l'URL propre pour l'attribut src.
+const mapsSrc = computed(() => {
+  const raw = info.data.mapsEmbed?.trim()
+  if (!raw) return ''
+  // Si c'est un tag <iframe ...>, on extrait la valeur de src="..."
+  const match = raw.match(/src=["']([^"']+)["']/)
+  return match ? match[1] : raw
+})
 </script>
 
 <style scoped>
@@ -135,9 +157,21 @@ function isToday(dayName) {
 }
 
 .day-name { color: var(--text); }
-.day-hours { color: var(--text-light); }
-.sep { margin: 0 0.3rem; opacity: 0.4; }
+.day-hours { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; color: var(--text-light); }
+.sep { opacity: 0.35; }
 .day-closed { color: var(--text-muted); font-style: italic; }
+
+.service-slot { display: flex; align-items: center; gap: 0.3rem; }
+.service-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
 
 .contact-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
 

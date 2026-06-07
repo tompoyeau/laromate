@@ -71,11 +71,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(password) {
-    const lock = getLockout()
-    if (lock) {
-      const mins = Math.ceil((lock.until - Date.now()) / 60000)
-      return { success: false, error: `Trop de tentatives. Réessaie dans ${mins} min.` }
-    }
+    // Lockout désactivé temporairement
+    // const lock = getLockout()
+    // if (lock) { ... }
+
     if (!password) return { success: false, error: '' }
 
     const hash = await sha256(password)
@@ -85,11 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
       isAuthenticated.value = true
       return { success: true }
     } else {
-      const l = recordFail()
-      if (l.attempts >= MAX_ATTEMPTS) {
-        return { success: false, error: `Compte bloqué 5 min après ${MAX_ATTEMPTS} tentatives.` }
-      }
-      return { success: false, error: `Mot de passe incorrect — ${MAX_ATTEMPTS - l.attempts} essai(s) restant(s).` }
+      return { success: false, error: 'Mot de passe incorrect.' }
     }
   }
 

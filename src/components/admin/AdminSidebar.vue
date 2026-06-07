@@ -77,6 +77,7 @@ const navSections = computed(() => [
   {
     label: 'Contenu',
     items: [
+      { id: 'content', icon: '✏️', label: 'Textes & Images' },
       { id: 'menu', icon: '🍔', label: 'La Carte' },
       { id: 'gallery', icon: '📸', label: 'Galerie' },
       { id: 'promotions', icon: '🎉', label: 'Offres & Promos' },

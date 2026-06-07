@@ -6,7 +6,8 @@
       <h1 class="login-title">Administration</h1>
       <p class="login-sub">L'Aromate — Espace réservé</p>
 
-      <div v-if="lockMsg" class="login-error lock-error">🔒 {{ lockMsg }}</div>
+      <!-- Lockout désactivé temporairement -->
+  <!-- <div v-if="lockMsg" class="login-error lock-error">🔒 {{ lockMsg }}</div> -->
 
       <form @submit.prevent="doLogin" class="login-form">
         <div class="form-group">
@@ -31,7 +32,7 @@
           {{ loading ? 'Vérification…' : 'Se connecter' }}
         </button>
       </form>
-      <p class="login-hint">3 tentatives incorrectes = blocage 5 min</p>
+      <!-- <p class="login-hint">3 tentatives incorrectes = blocage 5 min</p> -->
     </div>
   </div>
 
@@ -92,6 +93,7 @@ import QRCodePanel from '@/components/admin/panels/QRCodePanel.vue'
 import InfoPanel from '@/components/admin/panels/InfoPanel.vue'
 import PasswordPanel from '@/components/admin/panels/PasswordPanel.vue'
 import GoogleReviewsPanel from '@/components/admin/panels/GoogleReviewsPanel.vue'
+import ContentPanel from '@/components/admin/panels/ContentPanel.vue'
 
 const auth = useAuthStore()
 const { success, error: toastError } = useToast()
@@ -116,6 +118,7 @@ const PANELS = {
   info: InfoPanel,
   password: PasswordPanel,
   google: GoogleReviewsPanel,
+  content: ContentPanel,
 }
 
 const PANEL_TITLES = {
@@ -130,6 +133,7 @@ const PANEL_TITLES = {
   info: 'Informations du restaurant',
   password: 'Mot de passe',
   google: 'Google Reviews',
+  content: 'Contenu du site',
 }
 
 const currentPanel = computed(() => PANELS[activePanel.value] || DashboardPanel)
