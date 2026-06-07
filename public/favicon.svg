@@ -1,0 +1,11 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <title>L'Aromate favicon</title>
+  <rect width="32" height="32" rx="6" fill="#F5EDD8" stroke="#C8B88A" stroke-width="0.8"/>
+  <text x="16" y="24" text-anchor="middle"
+    font-family="'Playfair Display', Georgia, serif"
+    font-weight="700" font-size="20" fill="#2D4A2D">A</text>
+  <path d="M16 5 Q16 3 16 1.5" fill="none" stroke="#5C7A5C" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M16 5 Q12 3 11 0.5 Q14 2.5 16 4.5" fill="#5C7A5C"/>
+  <path d="M16 5 Q20 3 21 0.5 Q18 2.5 16 4.5" fill="#5C7A5C"/>
+  <circle cx="16" cy="1.5" r="1.5" fill="#3D6B3D"/>
+</svg>
