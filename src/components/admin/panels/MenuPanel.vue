@@ -150,6 +150,7 @@ import { ref, computed } from 'vue'
 import { useMenuStore } from '@/stores/menu.js'
 import { useToast } from '@/composables/useToast.js'
 import AppModal from '@/components/ui/AppModal.vue'
+import { compressImage } from '@/utils/compress.js'
 
 const menu = useMenuStore()
 const { success, error } = useToast()
@@ -183,33 +184,11 @@ const ALL_ALLERGENS = [
 // ── Image compression ────────────────────────────────────────────────────────
 const imgDragging = ref(false)
 
-function compressImage(file, maxW = 700, quality = 0.78) {
-  return new Promise((resolve, reject) => {
-    if (file.size > 3 * 1024 * 1024) { error('Image trop lourde (max 3 MB)'); resolve(''); return }
-    const reader = new FileReader()
-    reader.onload = e => {
-      const img = new Image()
-      img.onload = () => {
-        const ratio = Math.min(maxW / img.width, maxW / img.height, 1)
-        const w = Math.round(img.width * ratio)
-        const h = Math.round(img.height * ratio)
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/jpeg', quality))
-      }
-      img.onerror = reject
-      img.src = e.target.result
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 async function handleImgFile(e) {
   const file = e.target.files[0]
   if (!file) return
-  itemForm.value.image = await compressImage(file)
+  if (file.size > 3 * 1024 * 1024) { error('Image trop lourde (max 3 MB)'); return }
+  itemForm.value.image = await compressImage(file, 700, 0.78)
   e.target.value = ''
 }
 
@@ -217,7 +196,8 @@ async function handleImgDrop(e) {
   imgDragging.value = false
   const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
   if (!file) return
-  itemForm.value.image = await compressImage(file)
+  if (file.size > 3 * 1024 * 1024) { error('Image trop lourde (max 3 MB)'); return }
+  itemForm.value.image = await compressImage(file, 700, 0.78)
 }
 
 // ── Category modal ────────────────────────────────────────────────────────────

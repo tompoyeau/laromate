@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── config/* ─────────────────────────────────────────────────────────────
+    // L'admin du restaurant peut lire et modifier tous les docs de config
+    // SAUF config/features qui n'est modifiable que via l'Admin SDK (outil revendeur).
+    // Le Firebase Admin SDK contourne ces règles côté serveur — les restaurateurs
+    // ne peuvent donc pas activer des fonctionnalités non payées même en fouillant le code.
+    match /config/{docId} {
+      allow read:  if true;
+      allow write: if docId != 'features';
+    }
+
+    // ── Réservations, menus, galerie, avis, promos… ──────────────────────────
+    match /{collection}/{docId} {
+      allow read, write: if collection != 'config';
+    }
+  }
+}

@@ -48,51 +48,74 @@
                     </select>
                   </div>
                 </div>
+
+                <!-- Créneaux horaires adaptatifs -->
                 <div class="form-group">
                   <label class="form-label">Heure *</label>
-                  <div class="time-slots">
-                    <div class="slot-group">
-                      <p class="slot-label">Déjeuner</p>
+
+                  <!-- Restaurant fermé ce jour -->
+                  <div v-if="form.date && restaurantClosed" class="closed-notice">
+                    🚫 Le restaurant est fermé ce jour-là. Choisissez une autre date.
+                  </div>
+
+                  <div v-else-if="form.date" class="time-slots">
+                    <!-- Déjeuner -->
+                    <div v-if="showLunch" class="slot-group">
+                      <p class="slot-label">🌞 Déjeuner</p>
                       <div class="slots">
                         <button type="button" v-for="t in lunchSlots" :key="t"
-                          :class="['slot', { active: form.time === t, full: isSlotFull(t) }]"
-                          :disabled="isSlotFull(t)"
-                          @click="!isSlotFull(t) && (form.time = t)">
+                          :class="['slot', { active: form.time === t, full: slotUnavailable(t), past: isSlotPast(t) }]"
+                          :disabled="slotUnavailable(t)"
+                          @click="!slotUnavailable(t) && (form.time = t)">
                           {{ t }}
-                          <span v-if="isSlotFull(t)" class="slot-full-tag">Complet</span>
+                          <span v-if="isSlotPast(t)" class="slot-tag">Passé</span>
+                          <span v-else-if="slotUnavailable(t)" class="slot-tag">Complet</span>
                         </button>
                       </div>
                     </div>
-                    <div class="slot-group">
-                      <p class="slot-label">Dîner</p>
+
+                    <!-- Dîner -->
+                    <div v-if="showDinner" class="slot-group">
+                      <p class="slot-label">🌙 Dîner</p>
                       <div class="slots">
                         <button type="button" v-for="t in dinnerSlots" :key="t"
-                          :class="['slot', { active: form.time === t, full: isSlotFull(t) }]"
-                          :disabled="isSlotFull(t)"
-                          @click="!isSlotFull(t) && (form.time = t)">
+                          :class="['slot', { active: form.time === t, full: slotUnavailable(t), past: isSlotPast(t) }]"
+                          :disabled="slotUnavailable(t)"
+                          @click="!slotUnavailable(t) && (form.time = t)">
                           {{ t }}
-                          <span v-if="isSlotFull(t)" class="slot-full-tag">Complet</span>
+                          <span v-if="isSlotPast(t)" class="slot-tag">Passé</span>
+                          <span v-else-if="slotUnavailable(t)" class="slot-tag">Complet</span>
                         </button>
                       </div>
                     </div>
+
+                    <!-- Aucun service disponible (restaurant ouvert mais tout fermé) -->
+                    <div v-if="!showLunch && !showDinner && !restaurantClosed" class="closed-notice">
+                      🚫 Aucun service disponible ce jour-là.
+                    </div>
+                  </div>
+
+                  <div v-else class="slot-placeholder">
+                    Choisissez une date pour voir les disponibilités.
                   </div>
                 </div>
+
                 <div class="form-group">
                   <label class="form-label">Message (optionnel)</label>
                   <textarea v-model="form.message" class="form-textarea" placeholder="Allergie, anniversaire, demande particulière…" rows="3"></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary btn-full" :disabled="!form.time || loading">
                   <svg v-if="loading" class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                  {{ loading ? 'Envoi…' : 'Confirmer la réservation' }}
+                  {{ loading ? 'Confirmation…' : 'Confirmer la réservation' }}
                 </button>
               </form>
             </div>
 
             <div v-else key="success" class="success-screen">
               <div class="success-icon">✓</div>
-              <h3>Réservation envoyée !</h3>
-              <p>Merci <strong>{{ form.name }}</strong>, votre demande pour <strong>{{ form.covers }} personne(s)</strong> le <strong>{{ formatDate(form.date) }}</strong> à <strong>{{ form.time }}</strong> a bien été reçue.</p>
-              <p class="success-note">Nous vous confirmerons par email ou téléphone dans les plus brefs délais.</p>
+              <h3>Réservation confirmée !</h3>
+              <p>Merci <strong>{{ form.name }}</strong>, votre table pour <strong>{{ form.covers }} personne(s)</strong> le <strong>{{ formatDate(form.date) }}</strong> à <strong>{{ form.time }}</strong> est bien réservée.</p>
+              <p class="success-note">Un rappel vous sera envoyé. En cas de besoin, contactez-nous directement.</p>
               <button class="btn btn-outline" @click="reset">Nouvelle réservation</button>
             </div>
           </Transition>
@@ -103,46 +126,101 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useReservationsStore } from '@/stores/reservations.js'
-import { useToast } from '@/composables/useToast.js'
+import { ref, computed, watch } from 'vue'
+import { useReservationsStore, generateSlots } from '@/stores/reservations.js'
 import { useContentStore } from '@/stores/content.js'
 
 const reservations = useReservationsStore()
-const { success } = useToast()
 const content = useContentStore()
 
-const loading = ref(false)
+const loading  = ref(false)
 const submitted = ref(false)
 
-const minDate = new Date().toISOString().split('T')[0]
+// Date minimum en heure locale (évite le décalage UTC)
+const minDate = (() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+})()
 
-const lunchSlots = ['12:00', '12:15', '12:30', '12:45', '13:00', '13:15', '13:30', '13:45', '14:00', '14:15']
-const dinnerSlots = ['19:00', '19:15', '19:30', '19:45', '20:00', '20:15', '20:30', '20:45', '21:00', '21:15', '21:30']
-
-// Vérifie si un créneau est complet pour la date sélectionnée
-function isSlotFull(time) {
-  if (!form.value.date) return false
-  return reservations.isSlotFull(form.value.date, time)
-}
+const lunchSlots = computed(() => {
+  if (!form.value.date) return []
+  const s = reservations.scheduleForDate(form.value.date)
+  return generateSlots(s.lunchStart || '12:00', s.lunchEnd || '14:00', reservations.settings.slotInterval || 15)
+})
+const dinnerSlots = computed(() => {
+  if (!form.value.date) return []
+  const s = reservations.scheduleForDate(form.value.date)
+  return generateSlots(s.dinnerStart || '19:00', s.dinnerEnd || '21:30', reservations.settings.slotInterval || 15)
+})
 
 const defaultForm = () => ({ name: '', email: '', phone: '', date: minDate, time: '', covers: 2, message: '' })
 const form = ref(defaultForm())
 
+// ── Disponibilités selon le jour ─────────────────────────────────────────
+const restaurantClosed = computed(() => {
+  if (!form.value.date) return false
+  return !reservations.isRestaurantOpen(form.value.date)
+})
+
+const showLunch = computed(() => {
+  if (!form.value.date) return false
+  return reservations.isLunchOpen(form.value.date)
+})
+
+const showDinner = computed(() => {
+  if (!form.value.date) return false
+  return reservations.isDinnerOpen(form.value.date)
+})
+
+// Créneau dans le passé (aujourd'hui seulement)
+function isSlotPast(time) {
+  if (!form.value.date) return false
+  const now = new Date()
+  const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+  if (form.value.date !== todayLocal) return false
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m <= now.getHours() * 60 + now.getMinutes()
+}
+
+// Créneau indisponible : passé ou capacité dépassée
+function slotUnavailable(time) {
+  if (!form.value.date) return false
+  if (isSlotPast(time)) return true
+  return !reservations.canBook(form.value.date, time, form.value.covers)
+}
+
+// Réinitialise l'heure si la date, les couverts ou l'intervalle/plages changent
+watch([
+  () => form.value.date,
+  () => form.value.covers,
+  () => reservations.settings.slotInterval,
+  () => JSON.stringify(reservations.settings.schedule),
+], () => {
+  const t = form.value.time
+  if (!t) return
+  if (restaurantClosed.value)              { form.value.time = ''; return }
+  const isLunch = t < '15:00'
+  if (isLunch  && !showLunch.value)        { form.value.time = ''; return }
+  if (!isLunch && !showDinner.value)       { form.value.time = ''; return }
+  if (isSlotPast(t) || slotUnavailable(t)) { form.value.time = '' }
+})
+
+// ── Formulaire ────────────────────────────────────────────────────────────
 const perks = [
-  { icon: '⚡', title: 'Réponse rapide', desc: 'Confirmation sous 2h en moyenne' },
-  { icon: '🔄', title: 'Modification facile', desc: 'Annulation gratuite jusqu\'à 24h avant' },
-  { icon: '🎂', title: 'Occasions spéciales', desc: 'Anniversaires, dîners romantics…' },
+  { icon: '⚡', title: 'Confirmation immédiate',  desc: 'Votre réservation est confirmée en ligne' },
+  { icon: '🔄', title: 'Modification facile',     desc: 'Annulation gratuite jusqu\'à 24h avant' },
+  { icon: '🎂', title: 'Occasions spéciales',     desc: 'Anniversaires, dîners romantiques…' },
 ]
 
 async function submit() {
   if (!form.value.time) return
   loading.value = true
-  await new Promise(r => setTimeout(r, 800)) // simulate async
-  reservations.add({ ...form.value })
-  loading.value = false
-  submitted.value = true
-  success('Réservation envoyée avec succès !')
+  try {
+    await reservations.add({ ...form.value })
+    submitted.value = true
+  } finally {
+    loading.value = false
+  }
 }
 
 function reset() {
@@ -201,6 +279,7 @@ function formatDate(d) {
   color: var(--text);
 }
 
+/* Créneaux */
 .time-slots { display: flex; flex-direction: column; gap: 1rem; }
 
 .slot-label {
@@ -234,12 +313,13 @@ function formatDate(d) {
 
 .slot:hover:not(.active):not(.full) { border-color: var(--primary); color: var(--primary); }
 
-.slot.full {
+.slot.full,
+.slot.past {
   background: var(--bg);
   border-color: var(--border);
   color: var(--text-muted);
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.5;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -248,15 +328,35 @@ function formatDate(d) {
   padding-bottom: 0.25rem;
 }
 
-.slot-full-tag {
+.slot.past { text-decoration: line-through; }
+
+.slot-tag {
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 700;
-  color: #ef4444;
   line-height: 1;
 }
+.slot.full .slot-tag { color: #ef4444; }
+.slot.past .slot-tag { color: var(--text-muted); text-decoration: none; }
 
+.closed-notice {
+  padding: 0.75rem 1rem;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.slot-placeholder {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* Succès */
 .success-screen { text-align: center; padding: 2rem 1rem; }
 
 .success-icon {

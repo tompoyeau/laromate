@@ -49,7 +49,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useReservationsStore } from '@/stores/reservations.js'
-import { useReviewsStore } from '@/stores/reviews.js'
+import { useFeaturesStore } from '@/stores/features.js'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -61,60 +61,62 @@ defineEmits(['navigate', 'logout', 'toggle'])
 
 const router = useRouter()
 const reservations = useReservationsStore()
-const reviews = useReviewsStore()
+const features = useFeaturesStore()
 
 function goPublic() {
   window.open(router.resolve('/').href, '_blank')
 }
 
+// Filtre un tableau d'items : garde ceux dont le feature associé est actif (ou pas de feature)
+function f(items) {
+  return items.filter(item => !item.feature || features.is(item.feature))
+}
+
 const navSections = computed(() => [
   {
     label: 'Tableau de bord',
-    items: [
+    items: f([
       { id: 'dashboard', icon: '📊', label: 'Vue d\'ensemble' }
-    ]
+    ])
   },
   {
     label: 'Contenu',
-    items: [
-      { id: 'content', icon: '✏️', label: 'Textes & Images' },
-      { id: 'menu', icon: '🍔', label: 'La Carte' },
-      { id: 'gallery', icon: '📸', label: 'Galerie' },
-      { id: 'promotions', icon: '🎉', label: 'Offres & Promos' },
-    ]
+    items: f([
+      { id: 'content',    icon: '✏️', label: 'Textes & Images' },
+      { id: 'menu',       icon: '🍔', label: 'La Carte',         feature: 'menu' },
+      { id: 'gallery',    icon: '📸', label: 'Galerie',           feature: 'gallery' },
+      { id: 'promotions', icon: '🎉', label: 'Offres & Promos',   feature: 'promotions' },
+    ])
   },
   {
     label: 'Clients',
-    items: [
+    items: f([
       {
         id: 'reservations',
         icon: '📅',
         label: 'Réservations',
-        badge: reservations.pending.length || null
-      },
-      {
-        id: 'reviews',
-        icon: '⭐',
-        label: 'Avis clients',
-        badge: reviews.pending.length || null
+        badge: reservations.pending.length || null,
+        feature: 'reservations',
       },
       {
         id: 'google',
         icon: '🔵',
         label: 'Google Reviews',
+        feature: 'reviews',
       },
-    ]
+    ])
   },
   {
     label: 'Paramètres',
-    items: [
-      { id: 'theme', icon: '🎨', label: 'Thème & Identité' },
-      { id: 'qrcode', icon: '📱', label: 'QR Code' },
-      { id: 'info', icon: '🏪', label: 'Infos restaurant' },
+    items: f([
+      { id: 'theme',    icon: '🎨', label: 'Thème & Identité' },
+      { id: 'features', icon: '🧩', label: 'Modules' },
+      { id: 'qrcode',   icon: '📱', label: 'QR Code',           feature: 'qrcode' },
+      { id: 'info',     icon: '🏪', label: 'Infos restaurant' },
       { id: 'password', icon: '🔐', label: 'Mot de passe' },
-    ]
+    ])
   }
-])
+].filter(section => section.items.length > 0))
 </script>
 
 <style scoped>

@@ -21,10 +21,40 @@
         </div>
       </div>
       <div class="hero-badge">
-        <div class="badge-circle">
-          <span class="badge-top">{{ content.data.heroBadgeTop }}</span>
-          <span class="badge-main">{{ content.data.heroBadgeMain }}</span>
-          <span class="badge-bottom">{{ content.data.heroBadgeSub }}</span>
+        <div class="badge-wrapper">
+          <!-- Anneau rotatif avec texte sur chemin SVG -->
+          <svg class="badge-ring" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <!-- Le textPath tourne à r=69, entre les deux cercles décoratifs -->
+              <path id="ring-path" d="M80,80 m-69,0 a69,69 0 1,1 138,0 a69,69 0 1,1 -138,0"/>
+            </defs>
+            <!-- Fond opaque pour masquer le centre -->
+            <circle cx="80" cy="80" r="79" fill="rgba(10,14,8,0.5)" />
+            <!-- Cercle extérieur -->
+            <circle cx="80" cy="80" r="78" stroke="rgba(201,169,110,0.2)" stroke-width="0.6"/>
+            <!-- Cercle pointillé -->
+            <circle cx="80" cy="80" r="60" stroke="rgba(201,169,110,0.5)" stroke-width="0.8" stroke-dasharray="2.8 3"/>
+            <!-- Fond centre pour bloquer le texte de l'anneau -->
+            <circle cx="80" cy="80" r="58" fill="rgba(10,14,8,0.45)"/>
+            <!-- Texte circulaire sur l'anneau -->
+            <text fill="rgba(201,169,110,0.85)" font-size="9.2" font-family="'Inter', sans-serif" font-weight="600" letter-spacing="3.2">
+              <textPath href="#ring-path">
+                {{ ringText }}
+              </textPath>
+            </text>
+          </svg>
+          <!-- Centre statique (ne tourne pas) -->
+          <div class="badge-center">
+            <!-- Aromate / herb icon -->
+            <svg class="badge-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(201,169,110,0.9)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="22" x2="12" y2="10"/>
+              <path d="M12 10C10 8 7 8 5.5 5.5c3 0 5.5 1.5 6.5 4.5z"/>
+              <path d="M12 10C14 8 17 8 18.5 5.5c-3 0-5.5 1.5-6.5 4.5z"/>
+              <path d="M12 16C10.5 14.5 8.5 14.5 7.5 12.5c2 0 3.5 1 4.5 3.5z"/>
+              <path d="M12 16C13.5 14.5 15.5 14.5 16.5 12.5c-2 0-3.5 1-4.5 3.5z"/>
+            </svg>
+            <span class="badge-main-text">{{ content.data.heroBadgeMain }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -36,8 +66,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useContentStore } from '@/stores/content.js'
 const content = useContentStore()
+
+// Texte circulaire : répété 2× pour remplir l'anneau complet
+const ringText = computed(() => {
+  const top  = (content.data.heroBadgeTop  || 'FAIT').toUpperCase()
+  const main = (content.data.heroBadgeMain || 'Maison').toUpperCase()
+  const sub  = content.data.heroBadgeSub  || '2020'
+  const segment = `${top} ${main}  ✦  DEPUIS ${sub}  ✦  `
+  return segment.repeat(2)
+})
 
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -138,50 +178,51 @@ function scrollTo(id) {
 
 .hero-badge { flex-shrink: 0; }
 
-.badge-circle {
+/* Wrapper positionné pour superposer anneau + centre */
+.badge-wrapper {
+  position: relative;
   width: 160px;
   height: 160px;
-  border-radius: 50%;
-  border: 2px solid rgba(201, 169, 110, 0.6);
-  background: rgba(201, 169, 110, 0.12);
+}
+
+/* Anneau SVG qui tourne lentement */
+.badge-ring {
+  width: 160px;
+  height: 160px;
+  animation: rotate 28s linear infinite;
+  overflow: visible;
+}
+
+/* Centre fixe, ne tourne pas */
+.badge-center {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  animation: rotate 20s linear infinite;
-  backdrop-filter: blur(4px);
+  gap: 0.2rem;
+  pointer-events: none;
 }
 
-.badge-top {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--accent);
+.badge-icon {
+  margin-bottom: 0.15rem;
+  opacity: 0.9;
 }
 
-.badge-main {
+.badge-main-text {
   font-family: var(--font-heading);
-  font-size: 1.8rem;
+  font-size: 1.7rem;
+  font-style: italic;
   color: #fff;
   line-height: 1;
-  animation: counter-rotate 20s linear infinite;
-}
-
-.badge-bottom {
-  font-size: 0.72rem;
-  color: rgba(255,255,255,0.6);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.5);
 }
 
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
-}
-
-@keyframes counter-rotate {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(-360deg); }
 }
 
 .hero-scroll {

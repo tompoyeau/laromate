@@ -29,28 +29,6 @@
         <p v-else class="empty-state">Aucune réservation aujourd'hui</p>
       </div>
 
-      <!-- Pending reviews -->
-      <div class="card dash-card">
-        <div class="card-title">
-          ⭐ Avis en attente
-          <span class="pill pill-accent" v-if="reviews.pending.length">{{ reviews.pending.length }}</span>
-        </div>
-        <div v-if="reviews.pending.length" class="rev-list">
-          <div v-for="r in reviews.pending.slice(0,4)" :key="r.id" class="rev-item">
-            <div class="rev-header">
-              <span class="rev-author">{{ r.author }}</span>
-              <StarRating :model-value="r.rating" />
-            </div>
-            <p class="rev-text">{{ r.text.slice(0, 100) }}{{ r.text.length > 100 ? '…' : '' }}</p>
-            <div class="rev-actions">
-              <button class="btn btn-sm btn-primary" @click="reviews.toggleVisibility(r.id)">Publier</button>
-              <button class="btn btn-sm btn-ghost" @click="reviews.remove(r.id)">Supprimer</button>
-            </div>
-          </div>
-        </div>
-        <p v-else class="empty-state">Aucun avis en attente 🎉</p>
-      </div>
-
       <!-- Quick actions -->
       <div class="card dash-card">
         <div class="card-title">⚡ Actions rapides</div>
@@ -88,14 +66,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useReservationsStore } from '@/stores/reservations.js'
-import { useReviewsStore } from '@/stores/reviews.js'
 import { useMenuStore } from '@/stores/menu.js'
-import StarRating from '@/components/ui/StarRating.vue'
 
 defineEmits(['navigate'])
 
 const reservations = useReservationsStore()
-const reviews = useReviewsStore()
 const menu = useMenuStore()
 
 const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', noshow: 'No-show' }
@@ -114,22 +89,10 @@ const stats = computed(() => [
     color: '#8b9d77'
   },
   {
-    icon: '⭐',
-    label: 'Note moyenne',
-    value: reviews.avgRating > 0 ? reviews.avgRating + '/5' : '—',
-    color: '#c9a96e'
-  },
-  {
     icon: '🍽️',
     label: 'Plats au menu',
     value: menu.totalItems,
     color: '#7c6b5c'
-  },
-  {
-    icon: '💬',
-    label: 'Avis publiés',
-    value: reviews.visible.length,
-    color: '#5c6b7c'
   },
   {
     icon: '⏳',

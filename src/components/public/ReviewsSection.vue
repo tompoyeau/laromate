@@ -7,25 +7,8 @@
         <h2 class="section-title">{{ content.data.reviewsTitle }}</h2>
       </div>
 
-      <div v-if="google.isConfigured" class="google-block fade-up">
-
-        <!-- Badge note globale -->
-        <div class="g-badge" v-if="google.data.rating">
-          <GoogleLogo :size="32" />
-          <div class="g-badge-score">{{ google.data.rating }}</div>
-          <div class="g-badge-right">
-            <div class="g-stars">
-              <span v-for="i in 5" :key="i"
-                :style="{ color: i <= Math.round(Number(google.data.rating)) ? '#fbbc04' : '#ddd' }">★</span>
-            </div>
-            <div class="g-count">
-              {{ google.data.totalReviews ? google.data.totalReviews + ' avis Google' : 'Avis Google' }}
-            </div>
-          </div>
-          <a v-if="google.data.mapsUrl" :href="google.data.mapsUrl" target="_blank" rel="noopener" class="g-maps-link">
-            Voir sur Google Maps ↗
-          </a>
-        </div>
+      <Transition name="reviews-in">
+      <div v-if="google.isConfigured" class="google-block">
 
         <!-- Carrousel -->
         <div class="carousel">
@@ -33,7 +16,10 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
 
-          <div class="c-viewport">
+          <div class="c-viewport"
+            @touchstart.passive="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend.passive="onTouchEnd">
             <div class="c-track" :style="{ transform: `translateX(-${currentIndex * slideWidth}px)` }">
               <div v-for="r in google.data.reviews" :key="r.id" class="c-card card">
                 <div class="c-card-top">
@@ -80,6 +66,7 @@
         </div>
 
       </div>
+      </Transition>
 
     </div>
   </section>
@@ -123,6 +110,35 @@ function updatePerView() {
   perView.value = w < 640 ? 1 : w < 960 ? 2 : 3
 }
 
+// ── Swipe touch ───────────────────────────────────────────────────────────────
+let touchStartX = 0
+let touchStartY = 0
+let isSwiping = false
+
+function onTouchStart(e) {
+  touchStartX = e.touches[0].clientX
+  touchStartY = e.touches[0].clientY
+  isSwiping = false
+}
+
+function onTouchMove(e) {
+  const dx = e.touches[0].clientX - touchStartX
+  const dy = e.touches[0].clientY - touchStartY
+  // Détermine si c'est un swipe horizontal (et non un scroll vertical)
+  if (!isSwiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+    isSwiping = true
+  }
+  if (isSwiping) e.preventDefault()
+}
+
+function onTouchEnd(e) {
+  if (!isSwiping) return
+  const dx = e.changedTouches[0].clientX - touchStartX
+  if (dx < -40) next()
+  else if (dx > 40) prev()
+  isSwiping = false
+}
+
 onMounted(() => { updatePerView(); window.addEventListener('resize', updatePerView) })
 onUnmounted(() => window.removeEventListener('resize', updatePerView))
 </script>
@@ -132,6 +148,10 @@ onUnmounted(() => window.removeEventListener('resize', updatePerView))
 .section-header { text-align: center; margin-bottom: 2.5rem; }
 
 .google-block {}
+
+/* Animation d'entrée des avis (remplace fade-up pour gérer le v-if async) */
+.reviews-in-enter-active { transition: opacity 0.55s ease, transform 0.55s ease; }
+.reviews-in-enter-from   { opacity: 0; transform: translateY(18px); }
 
 /* Badge */
 .g-badge {
@@ -257,18 +277,18 @@ onUnmounted(() => window.removeEventListener('resize', updatePerView))
   align-items: center;
   gap: 0.5rem;
   padding: 0.7rem 1.5rem;
-  border: 1.5px solid #dadce0;
+  border: none;
   border-radius: var(--radius);
-  color: #3c4043;
+  color: #fff;
   font-size: 0.9rem;
   font-weight: 500;
   font-family: var(--font-body);
-  background: var(--bg-card);
-  transition: all 0.2s;
+  background: var(--primary);
+  transition: background 0.2s, transform 0.15s;
   cursor: pointer;
   text-decoration: none;
 }
-.g-cta-btn:hover { background: #f8f9fa; border-color: #4285F4; color: #1a73e8; }
+.g-cta-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
 
 @media (max-width: 960px) { .c-card { flex: 0 0 calc((100% - 16px) / 2); } }
 @media (max-width: 640px) { .c-card { flex: 0 0 100%; } .c-btn { display: none; } }

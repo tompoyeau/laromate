@@ -86,7 +86,6 @@ import DashboardPanel from '@/components/admin/panels/DashboardPanel.vue'
 import MenuPanel from '@/components/admin/panels/MenuPanel.vue'
 import GalleryPanel from '@/components/admin/panels/GalleryPanel.vue'
 import ReservationsPanel from '@/components/admin/panels/ReservationsPanel.vue'
-import ReviewsPanel from '@/components/admin/panels/ReviewsPanel.vue'
 import ThemePanel from '@/components/admin/panels/ThemePanel.vue'
 import PromotionsPanel from '@/components/admin/panels/PromotionsPanel.vue'
 import QRCodePanel from '@/components/admin/panels/QRCodePanel.vue'
@@ -94,6 +93,7 @@ import InfoPanel from '@/components/admin/panels/InfoPanel.vue'
 import PasswordPanel from '@/components/admin/panels/PasswordPanel.vue'
 import GoogleReviewsPanel from '@/components/admin/panels/GoogleReviewsPanel.vue'
 import ContentPanel from '@/components/admin/panels/ContentPanel.vue'
+import FeaturesPanel from '@/components/admin/panels/FeaturesPanel.vue'
 
 const auth = useAuthStore()
 const { success, error: toastError } = useToast()
@@ -107,33 +107,33 @@ const loading = ref(false)
 const showPass = ref(false)
 
 const PANELS = {
-  dashboard: DashboardPanel,
-  menu: MenuPanel,
-  gallery: GalleryPanel,
+  dashboard:    DashboardPanel,
+  menu:         MenuPanel,
+  gallery:      GalleryPanel,
   reservations: ReservationsPanel,
-  reviews: ReviewsPanel,
-  theme: ThemePanel,
-  promotions: PromotionsPanel,
-  qrcode: QRCodePanel,
-  info: InfoPanel,
-  password: PasswordPanel,
-  google: GoogleReviewsPanel,
-  content: ContentPanel,
+  theme:        ThemePanel,
+  promotions:   PromotionsPanel,
+  qrcode:       QRCodePanel,
+  info:         InfoPanel,
+  password:     PasswordPanel,
+  google:       GoogleReviewsPanel,
+  content:      ContentPanel,
+  features:     FeaturesPanel,
 }
 
 const PANEL_TITLES = {
-  dashboard: 'Vue d\'ensemble',
-  menu: 'La Carte',
-  gallery: 'Galerie photos',
+  dashboard:    'Vue d\'ensemble',
+  menu:         'La Carte',
+  gallery:      'Galerie photos',
   reservations: 'Réservations',
-  reviews: 'Avis clients',
-  theme: 'Thème & Identité',
-  promotions: 'Offres & Promotions',
-  qrcode: 'QR Code',
-  info: 'Informations du restaurant',
-  password: 'Mot de passe',
-  google: 'Google Reviews',
-  content: 'Contenu du site',
+  theme:        'Thème & Identité',
+  promotions:   'Offres & Promotions',
+  qrcode:       'QR Code',
+  info:         'Informations du restaurant',
+  password:     'Mot de passe',
+  google:       'Google Reviews',
+  content:      'Contenu du site',
+  features:     'Modules',
 }
 
 const currentPanel = computed(() => PANELS[activePanel.value] || DashboardPanel)

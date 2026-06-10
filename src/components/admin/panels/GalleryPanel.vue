@@ -111,28 +111,23 @@ async function processFiles(files) {
   uploading.value = true
   uploadProgress.value = 0
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i]
-    if (file.size > 5 * 1024 * 1024) {
-      error(`${file.name} dépasse 5 MB`)
-      continue
-    }
-    const dataUrl = await readFile(file)
-    await gallery.addPhoto(dataUrl)
-    uploadProgress.value = Math.round(((i + 1) / files.length) * 100)
+  const valid = files.filter(f => {
+    if (f.size > 5 * 1024 * 1024) { error(`${f.name} dépasse 5 MB`); return false }
+    return true
+  })
+
+  for (let i = 0; i < valid.length; i++) {
+    const file = valid[i]
+    // Upload direct vers Firebase Storage (pas de base64)
+    await gallery.addPhoto(file, pct => {
+      // Progression globale : fraction du fichier courant + fichiers précédents
+      uploadProgress.value = Math.round(((i + pct / 100) / valid.length) * 100)
+    })
+    uploadProgress.value = Math.round(((i + 1) / valid.length) * 100)
   }
 
   uploading.value = false
-  success(`${files.length} photo(s) ajoutée(s)`)
-}
-
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload  = e => resolve(e.target.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+  success(`${valid.length} photo(s) ajoutée(s)`)
 }
 
 async function deletePhoto(id) {

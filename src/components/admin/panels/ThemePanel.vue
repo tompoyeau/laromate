@@ -27,7 +27,7 @@
             </div>
           </div>
           <input ref="logoInput" type="file" accept="image/*" style="display:none" @change="uploadLogo" />
-          <button v-if="draft.logo" class="btn btn-ghost btn-sm mt-sm" @click="draft.logo = null">Supprimer le logo</button>
+          <button v-if="draft.logo" class="btn btn-ghost btn-sm mt-sm" @click="removeLogo">Supprimer le logo</button>
         </div>
       </div>
 
@@ -173,12 +173,17 @@ function resetDraft() {
   draft.value = { ...themeStore.theme }
 }
 
-function uploadLogo(e) {
+async function uploadLogo(e) {
   const file = e.target.files[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = ev => { draft.value.logo = ev.target.result; applyPreview() }
-  reader.readAsDataURL(file)
+  await themeStore.setLogo(file)
+  draft.value.logo = themeStore.theme.logo   // Synchronise le draft avec la version compressée
+  e.target.value = ''
+}
+
+async function removeLogo() {
+  await themeStore.removeLogo()
+  draft.value.logo = null
 }
 
 const previewStyle = computed(() => ({

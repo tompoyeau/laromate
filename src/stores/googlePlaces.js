@@ -1,33 +1,31 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { doc, onSnapshot, setDoc } from 'firebase/firestore'
+import { db } from '@/firebase.js'
 
-const LS_KEY = 'laromate_google'
+const DOC_REF = doc(db, 'config', 'googlePlaces')
 
 const DEFAULT = {
-  enabled: true,
-  rating: '',          // note globale ex: "4.7"
-  totalReviews: '',    // ex: "128"
-  mapsUrl: '',         // lien vers la fiche Google Maps
-  reviews: []          // avis saisis manuellement
+  mapsUrl: '',   // lien fiche Google Maps (bouton "Laisser un avis")
+  reviews: [],   // avis saisis manuellement
 }
 
 export const useGooglePlacesStore = defineStore('googlePlaces', () => {
-  const data = ref(load())
+  const data   = ref({ ...DEFAULT })
+  const loaded = ref(false)
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      return raw ? { ...DEFAULT, ...JSON.parse(raw) } : { ...DEFAULT }
-    } catch { return { ...DEFAULT } }
-  }
+  // Écoute temps réel
+  onSnapshot(DOC_REF, snap => {
+    if (snap.exists()) {
+      // Compatibilité : on garde mapsUrl et reviews, on ignore les anciens champs
+      const { mapsUrl = '', reviews = [] } = snap.data()
+      data.value = { mapsUrl, reviews }
+    }
+    loaded.value = true
+  }, console.error)
 
-  function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(data.value))
-  }
-
-  function update(fields) {
-    Object.assign(data.value, fields)
-    save()
+  async function save() {
+    await setDoc(DOC_REF, JSON.parse(JSON.stringify(data.value)))
   }
 
   function addReview(review) {
@@ -46,24 +44,26 @@ export const useGooglePlacesStore = defineStore('googlePlaces', () => {
   }
 
   function moveUp(id) {
-    const idx = data.value.reviews.findIndex(r => r.id === id)
-    if (idx > 0) {
-      const arr = data.value.reviews
-      ;[arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]
-      save()
-    }
+    const arr = data.value.reviews
+    const idx = arr.findIndex(r => r.id === id)
+    if (idx > 0) { ;[arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]; save() }
   }
 
   function moveDown(id) {
     const arr = data.value.reviews
     const idx = arr.findIndex(r => r.id === id)
-    if (idx < arr.length - 1) {
-      ;[arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]
-      save()
-    }
+    if (idx < arr.length - 1) { ;[arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]; save() }
   }
 
-  const isConfigured = computed(() => data.value.enabled && data.value.reviews.length > 0)
+  // Note moyenne calculée automatiquement depuis les avis
+  const avgRating = computed(() => {
+    if (!data.value.reviews.length) return 0
+    const sum = data.value.reviews.reduce((s, r) => s + (r.rating || 0), 0)
+    return Math.round((sum / data.value.reviews.length) * 10) / 10
+  })
 
-  return { data, isConfigured, update, addReview, updateReview, removeReview, moveUp, moveDown }
+  // Section visible dès qu'il y a au moins un avis
+  const isConfigured = computed(() => data.value.reviews.length > 0)
+
+  return { data, loaded, isConfigured, avgRating, save, addReview, updateReview, removeReview, moveUp, moveDown }
 })

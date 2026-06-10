@@ -8,35 +8,12 @@
       <button class="btn btn-primary btn-sm" @click="openAdd">+ Ajouter un avis</button>
     </div>
 
-    <!-- Global settings -->
-    <div class="card settings-card">
-      <div class="section-head">⚙️ Paramètres généraux</div>
-      <div class="settings-row">
-        <div class="form-group" style="flex:0 0 120px">
-          <label class="form-label">Note globale</label>
-          <input v-model="data.rating" class="form-input" placeholder="4.7" @change="save" />
-        </div>
-        <div class="form-group" style="flex:0 0 150px">
-          <label class="form-label">Nombre d'avis</label>
-          <input v-model="data.totalReviews" class="form-input" placeholder="128" @change="save" />
-        </div>
-        <div class="form-group" style="flex:1">
-          <label class="form-label">Lien Google Maps (optionnel)</label>
-          <input v-model="data.mapsUrl" class="form-input" placeholder="https://maps.google.com/..." @change="save" />
-        </div>
-        <div class="form-group" style="flex:0 0 auto; align-self:flex-end">
-          <label class="toggle-label">
-            <label class="toggle">
-              <input type="checkbox" v-model="data.enabled" @change="save" />
-              <span class="toggle-track"><span class="toggle-thumb" /></span>
-            </label>
-            Afficher sur le site
-          </label>
-        </div>
+    <!-- Lien Google Maps -->
+    <div class="card maps-card">
+      <div class="maps-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--text-muted)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <input v-model="data.mapsUrl" class="form-input maps-input" placeholder="Lien Google Maps (optionnel) — pour le bouton « Laisser un avis »" @change="save" />
       </div>
-      <p class="form-hint">
-        💡 Retrouve la note et le nombre d'avis sur la fiche Google Maps de ton restaurant.
-      </p>
     </div>
 
     <!-- Reviews list -->
@@ -164,19 +141,9 @@ function remove(id) {
 .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .panel-title { font-family: var(--font-heading); font-size: 1.6rem; display: flex; align-items: center; gap: 0.6rem; }
 
-.settings-card { padding: 1.5rem; margin-bottom: 1.25rem; }
-.section-head { font-weight: 600; font-size: 0.95rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
-
-.settings-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
-.form-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.75rem; }
-
-.toggle-label { display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; font-weight: 500; padding-bottom: 0.5rem; }
-.toggle { display: inline-flex; cursor: pointer; }
-.toggle input { display: none; }
-.toggle-track { width: 38px; height: 22px; background: var(--border); border-radius: 99px; position: relative; transition: background 0.2s; }
-.toggle input:checked + .toggle-track { background: var(--primary); }
-.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.2s; }
-.toggle input:checked + .toggle-track .toggle-thumb { left: 18px; }
+.maps-card { padding: 0.6rem 1rem; margin-bottom: 1.25rem; }
+.maps-row { display: flex; align-items: center; gap: 0.6rem; }
+.maps-input { flex: 1; font-size: 0.88rem; }
 
 .reviews-list { display: flex; flex-direction: column; gap: 0.75rem; }
 

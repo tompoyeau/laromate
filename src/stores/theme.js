@@ -2,9 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/firebase.js'
-
-// Le logo (base64) reste en localStorage — trop lourd pour Firestore
-const LS_LOGO = 'laromate_theme_logo'
+import { compressImage } from '@/utils/compress.js'
 
 const DEFAULT_THEME = {
   primaryColor: '#6b7c5c',
@@ -19,13 +17,9 @@ const DEFAULT_THEME = {
 }
 
 export const useThemeStore = defineStore('theme', () => {
-  const theme = ref({ ...DEFAULT_THEME, logo: loadLogo() })
+  const theme = ref({ ...DEFAULT_THEME, logo: null })
 
-  function loadLogo() {
-    try { return localStorage.getItem(LS_LOGO) || null } catch { return null }
-  }
-
-  // Chargement Firestore (non bloquant)
+  // Paramètres (couleurs, typo, etc.) depuis Firestore
   getDoc(doc(db, 'config', 'theme')).then(snap => {
     if (snap.exists()) {
       Object.assign(theme.value, snap.data())
@@ -33,11 +27,27 @@ export const useThemeStore = defineStore('theme', () => {
     }
   }).catch(console.error)
 
+  // Logo dans un doc séparé (évite de réécrire la base64 à chaque modif de couleur)
+  getDoc(doc(db, 'config', 'themeLogo')).then(snap => {
+    if (snap.exists()) theme.value.logo = snap.data().data || null
+  }).catch(console.error)
+
+  // Sauvegarde les paramètres (hors logo) dans Firestore
   async function save() {
-    // On ne persiste pas le logo dans Firestore
     const { logo, ...rest } = theme.value
     await setDoc(doc(db, 'config', 'theme'), JSON.parse(JSON.stringify(rest)))
-    if (logo) localStorage.setItem(LS_LOGO, logo)
+  }
+
+  // Compresse et sauvegarde le logo dans son propre doc Firestore
+  async function setLogo(source) {
+    const compressed = await compressImage(source, 400, 0.85)
+    theme.value.logo = compressed
+    await setDoc(doc(db, 'config', 'themeLogo'), { data: compressed })
+  }
+
+  async function removeLogo() {
+    theme.value.logo = null
+    await setDoc(doc(db, 'config', 'themeLogo'), { data: null })
   }
 
   function applyTheme() {
@@ -55,7 +65,9 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function update(fields) {
-    Object.assign(theme.value, fields)
+    // Logo ne passe plus par update() — utiliser setLogo() / removeLogo()
+    const { logo, ...rest } = fields
+    Object.assign(theme.value, rest)
     save()
     applyTheme()
   }
@@ -68,5 +80,5 @@ export const useThemeStore = defineStore('theme', () => {
 
   watch(theme, () => applyTheme(), { deep: true })
 
-  return { theme, darkMode: ref(theme.value.darkMode), update, applyTheme, toggleDark }
+  return { theme, darkMode: ref(theme.value.darkMode), update, setLogo, removeLogo, applyTheme, toggleDark }
 })

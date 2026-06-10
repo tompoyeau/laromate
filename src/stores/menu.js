@@ -1,10 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '@/firebase.js'
-
-// Les images (base64) restent en localStorage — limite 1Mo/doc Firestore
-const LS_IMAGES = 'laromate_menu_images'
 
 const DEFAULT_MENU = {
   categories: [
@@ -58,15 +55,7 @@ const DEFAULT_MENU = {
   ]
 }
 
-function loadImages() {
-  try { return JSON.parse(localStorage.getItem(LS_IMAGES) || '{}') } catch { return {} }
-}
-
-function saveImages(images) {
-  try { localStorage.setItem(LS_IMAGES, JSON.stringify(images)) } catch {}
-}
-
-// Retire le champ image avant d'envoyer à Firestore
+// Retire le champ image avant d'écrire dans config/menu
 function stripImages(categories) {
   return categories.map(cat => ({
     ...cat,
@@ -74,43 +63,33 @@ function stripImages(categories) {
   }))
 }
 
-// Réinjecte les images depuis localStorage
-function mergeImages(categories, images) {
-  return categories.map(cat => ({
-    ...cat,
-    items: cat.items.map(item => ({ ...item, image: images[item.id] || '' }))
-  }))
-}
-
 export const useMenuStore = defineStore('menu', () => {
   const data = ref(JSON.parse(JSON.stringify(DEFAULT_MENU)))
-  const _images = ref(loadImages())
 
-  // Chargement Firestore (non bloquant)
-  getDoc(doc(db, 'config', 'menu')).then(snap => {
-    if (snap.exists()) {
-      const saved = snap.data()
-      // Migration : garantit tags/allergens
+  // Chargement Firestore (non bloquant) : structure + images séparées
+  Promise.all([
+    getDoc(doc(db, 'config', 'menu')),
+    getDocs(collection(db, 'menuImages'))
+  ]).then(([menuSnap, imgSnaps]) => {
+    // Catalogue des images par itemId
+    const images = {}
+    imgSnaps.forEach(d => { images[d.id] = d.data().data || '' })
+
+    if (menuSnap.exists()) {
+      const saved = menuSnap.data()
       saved.categories?.forEach(cat => {
         cat.items?.forEach(item => {
           if (!item.tags) item.tags = []
           if (!item.allergens) item.allergens = []
+          item.image = images[item.id] || ''
         })
       })
-      data.value = { categories: mergeImages(saved.categories || [], _images.value) }
+      data.value = { categories: saved.categories || [] }
     }
   }).catch(console.error)
 
+  // Sauvegarde la structure (sans images) dans config/menu
   async function save() {
-    // Sauvegarde les images séparément
-    const images = {}
-    data.value.categories.forEach(cat => {
-      cat.items.forEach(item => { if (item.image) images[item.id] = item.image })
-    })
-    _images.value = images
-    saveImages(images)
-
-    // Firestore : sans les images
     await setDoc(doc(db, 'config', 'menu'), {
       categories: stripImages(JSON.parse(JSON.stringify(data.value.categories)))
     })
@@ -143,12 +122,23 @@ export const useMenuStore = defineStore('menu', () => {
     if (!cat) return
     const item = cat.items.find(i => i.id === itemId)
     if (item) Object.assign(item, fields)
+
+    // Image dans sa propre collection Firestore
+    if ('image' in fields) {
+      if (fields.image) {
+        setDoc(doc(db, 'menuImages', itemId), { data: fields.image }).catch(console.error)
+      } else {
+        deleteDoc(doc(db, 'menuImages', itemId)).catch(() => {})
+      }
+    }
+
     save()
   }
 
   function deleteItem(catId, itemId) {
     const cat = data.value.categories.find(c => c.id === catId)
     if (cat) cat.items = cat.items.filter(i => i.id !== itemId)
+    deleteDoc(doc(db, 'menuImages', itemId)).catch(() => {})
     save()
   }
 

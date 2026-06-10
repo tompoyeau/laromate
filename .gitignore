@@ -4,3 +4,10 @@ dist/
 .env.local
 .DS_Store
 *.log
+
+# Configs par client (contiennent les clés Firebase — publiques mais propres à chaque projet)
+.env.*
+!.env.example
+
+# L'outil revendeur est dans un projet séparé : D:\dev\restaurant-manager\
+# Ne rien mettre ici qui lui appartient.

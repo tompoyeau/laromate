@@ -2,9 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/firebase.js'
-
-// L'image hero reste en localStorage (base64 potentiellement lourd)
-const LS_IMG = 'laromate_hero_image'
+import { compressImage } from '@/utils/compress.js'
 
 export const DEFAULT_CONTENT = {
   heroLabel:  "Restaurant · Bordeaux",
@@ -31,15 +29,16 @@ export const DEFAULT_CONTENT = {
 
 export const useContentStore = defineStore('content', () => {
   const data      = ref({ ...DEFAULT_CONTENT })
-  const heroImage = ref(loadImage())
+  const heroImage = ref('')
 
-  function loadImage() {
-    try { return localStorage.getItem(LS_IMG) || '' } catch { return '' }
-  }
-
-  // Chargement Firestore (non bloquant)
+  // Chargement textes + image hero depuis Firestore (non bloquant)
   getDoc(doc(db, 'config', 'content')).then(snap => {
     if (snap.exists()) Object.assign(data.value, snap.data())
+  }).catch(console.error)
+
+  // Image hero dans un doc séparé (évite de réécrire la base64 à chaque modif de texte)
+  getDoc(doc(db, 'config', 'heroImage')).then(snap => {
+    if (snap.exists()) heroImage.value = snap.data().data || ''
   }).catch(console.error)
 
   async function save() {
@@ -51,16 +50,16 @@ export const useContentStore = defineStore('content', () => {
     save()
   }
 
-  function setHeroImage(base64) {
-    heroImage.value = base64
-    try { localStorage.setItem(LS_IMG, base64) } catch (e) {
-      console.warn('Hero image trop lourde pour localStorage', e)
-    }
+  async function setHeroImage(source) {
+    // Compresse à 1920px max avant de stocker dans Firestore
+    const compressed = await compressImage(source, 1920, 0.82)
+    heroImage.value = compressed
+    await setDoc(doc(db, 'config', 'heroImage'), { data: compressed })
   }
 
-  function removeHeroImage() {
+  async function removeHeroImage() {
     heroImage.value = ''
-    localStorage.removeItem(LS_IMG)
+    await setDoc(doc(db, 'config', 'heroImage'), { data: '' })
   }
 
   function heroImageSrc() {
